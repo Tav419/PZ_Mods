@@ -78,8 +78,19 @@ local function square(x, y, z)
     return sq
 end
 local world = {}
+local squares, unloaded = {}, {}
+local function key(x, y, z) return x .. "," .. y .. "," .. z end
+function getCell()
+    return { getGridSquare = function(_, x, y, z)
+        local k = key(x, y, z)
+        if unloaded[k] then return nil end
+        squares[k] = squares[k] or square(x, y, z)
+        return squares[k]
+    end }
+end
 local function inverter(id, x, y, z, cpl)
     local sq = square(x, y, z)
+    squares[key(x, y, z)] = sq
     local o = { mark = { id = id, model = "Inverter", st = "on", cpl = cpl }, sq = sq }
     function o:getSquare() return self.sq end
     sq.objs[1] = o
@@ -98,12 +109,17 @@ LiveWire.Config = {
     verticalRange = function() return 3 end,
     get = function(k) return ({ LinkRange = 30, LinkVerticalRange = 3, WirePerTiles = 4 })[k] end,
 }
-LiveWire.RangeView = { COLOR = { r = 0.25, g = 0.9, b = 1.0, a = 0.9 }, shown = nil }
-function LiveWire.RangeView.isShown(id) return LiveWire.RangeView.shown == id end
-function LiveWire.RangeView.hide() LiveWire.RangeView.shown = nil end
-function LiveWire.RangeView.show(id) LiveWire.RangeView.shown = id end
+-- Same public fields as LW_RangeView.lua.
+local RV = { COLOR = { r = 0.25, g = 0.9, b = 1.0, a = 0.9 } }
+LiveWire.RangeView = RV
+function RV.isShown(id) return RV.inverterId ~= nil and RV.inverterId == id end
+function RV.hide() RV.inverterId, RV.center, RV.opts = nil, nil, nil end
+function RV.show(id, x, y, z, opts) RV.inverterId, RV.center, RV.opts = id, { x = x, y = y, z = z }, opts end
 LiveWire.PumpView = { hide = function() end, isShown = function() return false end }
 LiveWire.Marks = { get = function(o) return o and o.mark end }
+function LiveWire.Marks.findOnSquare(sq, id)
+    for _, o in ipairs(sq.objs) do if o.mark and o.mark.id == id then return o end end
+end
 local function dist(a, b)
     local dx, dy = a:getX() - b:getX(), a:getY() - b:getY()
     return math.sqrt(dx * dx + dy * dy), math.abs(a:getZ() - b:getZ())
@@ -261,15 +277,57 @@ ZV.hide()
 local menu = openMenu(M)
 click(find(menu, "Show all powered areas"))
 click(find(openMenu(M), "ContextMenu_LW_ShowRange"))
-check(not ZV.isShown("M") and LiveWire.RangeView.shown == "M", "Show range replaces the network view")
+check(not ZV.isShown("M") and RV.inverterId == "M", "Show range replaces the network view")
 click(find(openMenu(M), "Show all powered areas"))
-check(ZV.isShown("M") and LiveWire.RangeView.shown == nil, "Show all replaces the single circle")
+check(ZV.isShown("M") and RV.inverterId == nil, "Show all replaces the single circle")
 -- Picked up between menu and click: no error, nothing shown.
 ZV.hide()
 local ghost = { getSquare = function() return nil end }
 local ok = pcall(LiveWire.Menu.onShowAllZones, player, ghost)
 check(ok and ZV.networkId == nil, "clicking for a removed inverter does nothing")
 check(uiCount <= 1, "overlays are not leaked (" .. uiCount .. " in UI)")
+
+---------------------------------------------------------------- removed inverters
+local function runTicks(n) for _ = 1, n do for _, f in ipairs(ticks) do f() end end end
+local function pickUp(o)
+    o.sq.objs = {}
+    for i, w in ipairs(world) do if w == o then table.remove(world, i) break end end
+end
+local function putBack(o)
+    o.sq.objs = { o }
+    world[#world + 1] = o
+end
+ZV.show(ZV.collect(M))
+pickUp(S1)
+runTicks(ZV.CHECK_TICKS or 30)
+check(ZV.isShown("M") and #ZV.centers == 2, "a picked-up slave's circle goes away, the rest stay")
+n = render()
+check(n == 2 * 96 + 2 * 2, "only the two remaining circles are drawn, got " .. n)
+pickUp(M); pickUp(S2)
+runTicks(ZV.CHECK_TICKS or 30)
+check(ZV.networkId == nil and ZV.element == nil, "the view hides once every inverter is gone")
+putBack(M); putBack(S1); putBack(S2)
+-- An unloaded square proves nothing: the circle stays.
+ZV.show(ZV.collect(M))
+unloaded[key(120, 100, 0)] = true
+runTicks(ZV.CHECK_TICKS or 30)
+check(ZV.isShown("M") and #ZV.centers == 3, "a circle on an unloaded square is kept")
+unloaded[key(120, 100, 0)] = nil
+ZV.hide()
+-- Live Wire's own Show range circle.
+click(find(openMenu(X), "ContextMenu_LW_ShowRange"))
+check(RV.inverterId == "X", "Show range shown for X")
+runTicks(ZV.CHECK_TICKS or 30)
+check(RV.inverterId == "X", "Show range stays while its inverter is there")
+pickUp(X)
+runTicks(ZV.CHECK_TICKS or 30)
+check(RV.inverterId == nil, "Show range hides after its inverter is picked up")
+putBack(X)
+-- A pump's circle (RangeView with options) is left to LW_PumpView.
+RV.show("P", 300, 300, 0, { radius = 10 })
+runTicks(ZV.CHECK_TICKS or 30)
+check(RV.inverterId == "P", "a pump's circle is not touched")
+RV.hide()
 
 print(string.format("%d passed, %d failed", passes, fails))
 return fails

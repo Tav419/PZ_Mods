@@ -14,6 +14,11 @@ network stands out. Click it again (**Hide all powered areas**) to hide it.
 "Show range" still shows one inverter's area, and each view replaces the other.
 The view hides itself when you walk more than 60 tiles from every inverter.
 
+A circle also goes away about half a second after its inverter is picked up,
+salvaged or destroyed. That fix covers Live Wire's own "Show range" circle too,
+which otherwise stays on screen after its inverter is gone (only the drawing
+stayed: the inverter's power was already switched off).
+
 Added file: `42.21/media/lua/client/LiveWireCoupling/LWC_ZonesView.lua`.
 Changed: `client/LiveWire/LW_ContextMenu.lua` (the menu option).
 

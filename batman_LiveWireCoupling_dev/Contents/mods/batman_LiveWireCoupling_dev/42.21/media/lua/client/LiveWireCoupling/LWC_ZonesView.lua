@@ -6,6 +6,9 @@
 -- the arcs inside another inverter's circle are drawn faint, so the outer edge
 -- of the whole network's area stands out. Hidden when the player walks far from
 -- every inverter of the network.
+-- A circle goes away when its inverter is removed (picked up, salvaged, destroyed).
+-- The same check hides Live Wire's own "Show range" circle (LW_RangeView.lua),
+-- which otherwise stays on screen after its inverter is gone.
 if isServer() then return end
 
 require "ISUI/ISUIElement"
@@ -18,9 +21,10 @@ LiveWire.ZonesView = ZV
 ZV.HIDE_DISTANCE = 60
 ZV.SEGMENTS = 96
 ZV.INNER_ALPHA = 0.3
+ZV.CHECK_TICKS = 30   -- how often removed inverters are looked for
 
 ZV.networkId = nil    -- master inverter id of the network shown
-ZV.centers = nil      -- list of { x, y, z }, one per inverter
+ZV.centers = nil      -- list of { x, y, z, id }, one per inverter
 ZV.element = nil
 
 local Overlay = ISUIElement:derive("LiveWireZonesOverlay")
@@ -116,7 +120,7 @@ function ZV.collect(obj)
         if seen[id] then return end
         seen[id] = true
         local sq = o:getSquare()
-        centers[#centers + 1] = { x = sq:getX(), y = sq:getY(), z = sq:getZ() }
+        centers[#centers + 1] = { x = sq:getX(), y = sq:getY(), z = sq:getZ(), id = id }
     end
     add(obj, mark.id)
     local list = I.invertersInRange(base:getSquare())
@@ -138,7 +142,38 @@ function ZV.show(networkId, centers)
     ZV.element = el
 end
 
+-- True when inverter `id` is known to be gone from the square at `c`: the square is
+-- loaded and holds no device with that id. An unloaded square proves nothing.
+local function gone(c, id)
+    local cell = getCell()
+    local sq = cell and cell:getGridSquare(c.x, c.y, c.z)
+    return sq ~= nil and LiveWire.Marks.findOnSquare(sq, id) == nil
+end
+
+local function dropRemoved()
+    if ZV.centers then
+        local kept = {}
+        for i = 1, #ZV.centers do
+            local c = ZV.centers[i]
+            if not gone(c, c.id) then kept[#kept + 1] = c end
+        end
+        if #kept == 0 then ZV.hide() else ZV.centers = kept end
+    end
+    -- Live Wire's "Show range": only an inverter's circle (a pump's circle has options
+    -- and is managed by LW_PumpView.lua).
+    local RV = LiveWire.RangeView
+    if RV and RV.inverterId and RV.center and not RV.opts and gone(RV.center, RV.inverterId) then
+        RV.hide()
+    end
+end
+
+local checkCounter = 0
 local function onTick()
+    checkCounter = checkCounter + 1
+    if checkCounter >= ZV.CHECK_TICKS then
+        checkCounter = 0
+        dropRemoved()
+    end
     if not ZV.centers then return end
     local player = getPlayer()
     if not player then return end
