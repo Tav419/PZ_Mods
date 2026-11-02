@@ -1,0 +1,14 @@
+# Normalize text files to LF in the repo
+* text=auto eol=lf
+
+# Game assets are binary
+*.png  binary
+*.jpg  binary
+*.ogg  binary
+*.wav  binary
+*.fbx  binary
+*.x    binary
+*.pack binary
+*.tiles binary
+*.lotheader binary
+*.bin  binary

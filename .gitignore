@@ -1,0 +1,15 @@
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.idea/
+
+# Packaging output
+/dist/
+/build/
+*.zip
+
+# Logs
+*.log
