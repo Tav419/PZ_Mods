@@ -6,10 +6,11 @@ released add-on, never both: they replace the same Live Wire files.
 
 ## New in this build: "Coupling range"
 
-A sandbox option, on the Live Wire page next to "Cable range": **Coupling
-range**, the farthest a coupled (slave) inverter can be from its master, 0 to 70
-tiles. 0 (the default) keeps Live Wire's behaviour: the same as Cable range. The
-cable range for equipment (lights, appliances, batteries...) does not change.
+A sandbox option, on its own page **Live Wire: Coupled Inverter Zones**:
+**Coupling range (0 = same as Cable range)**, the farthest a coupled (slave)
+inverter can be from its master, 0 to 70 tiles. 0 (the default) keeps Live
+Wire's behaviour: the same as "Cable range" on the Live Wire page. The cable
+range for equipment (lights, appliances, batteries...) does not change.
 
 - Coupling still needs the coupling kit, and wire for the distance as set by
   "Tiles per electric wire" (1 wire per 4 tiles by default), so a longer
@@ -18,14 +19,16 @@ cable range for equipment (lights, appliances, batteries...) does not change.
   limit of "Cable vertical range", the Electrical level.
 - The master must be loaded when you couple: your game keeps about 70 tiles
   loaded around you on a 1080p screen, less on smaller screens (about 48 tiles
-  at 1366x768). A master farther than that is not listed.
+  at 1366x768). A master farther than that is not listed. With no master in
+  reach, the menu says "No inverter within the coupling range (N tiles)".
 - A coupled inverter's menu shows how far its master is, even past the cable
   range, and "Show all powered areas" finds the whole network at any distance.
 - Lowering the option later does not uncouple inverters already coupled.
 
 Added files:
 - `42.21/media/sandbox-options.txt`: the option.
-- `42.21/media/lua/shared/Translate/EN/Sandbox.json`: its name and tooltip.
+- `42.21/media/lua/shared/Translate/EN/Sandbox.json`: the page title, the
+  option's name and tooltip (other languages show the English text).
 - `42.21/media/lua/shared/LiveWireCoupling/LWC_CouplingRange.lua`: makes Live
   Wire's coupling check use the coupling range (it wraps
   `Install.checkCouple`, so `LW_Install.lua` is not replaced) and finds far

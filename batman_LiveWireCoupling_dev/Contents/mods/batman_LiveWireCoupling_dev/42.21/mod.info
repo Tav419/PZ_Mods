@@ -1,6 +1,6 @@
 name=Live Wire: Coupled Inverter Zones (DEV)
 id=batman_LiveWireCoupling_dev
 require=batman_LiveWire
-description=TEST BUILD of Live Wire: Coupled Inverter Zones. Adds a "Coupling range" sandbox option (Live Wire page) so inverters can be coupled farther than the cable range. Enable this OR batman_LiveWireCoupling, never both. Patch for Live Wire by batman-fr (cyberbobjr on GitHub), Workshop ID 3821807453. Unofficial add-on, not made by batman-fr.
+description=TEST BUILD of Live Wire: Coupled Inverter Zones. Adds a "Coupling range" sandbox option (own page: Live Wire: Coupled Inverter Zones) so inverters can be coupled farther than the cable range. Enable this OR batman_LiveWireCoupling, never both. Patch for Live Wire by batman-fr (cyberbobjr on GitHub), Workshop ID 3821807453. Unofficial add-on, not made by batman-fr.
 versionMin=42.21
 modversion=1.2.0

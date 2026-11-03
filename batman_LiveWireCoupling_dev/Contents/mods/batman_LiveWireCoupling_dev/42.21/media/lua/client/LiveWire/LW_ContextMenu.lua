@@ -288,7 +288,7 @@ local function addMuffleOption(menu, player, obj, mark)
 end
 
 -- Show or hide the powered areas of every inverter of the network. Add-on text,
--- with an English fallback (the add-on ships no translation files).
+-- with an English fallback (the add-on ships no menu translation files).
 local function addAllZonesOption(menu, player, obj, mark)
     local key, text = "ContextMenu_LWC_ShowAllZones", "Show all powered areas"
     if LiveWire.ZonesView.isShown(LiveWire.ZonesView.networkOf(mark)) then
@@ -333,7 +333,10 @@ local function addCoupleOptions(menu, player, obj)
     local csub = ISContextMenu:getNew(menu)
     menu:addSubMenu(co, csub)
     if #masters == 0 then
-        disabled(csub, getText("ContextMenu_LW_NoInverter", tostring(range)))
+        -- Add-on text: the limit here is the coupling range, not the cable range.
+        local r = tostring(range)
+        disabled(csub, getTextOrNull("ContextMenu_LWC_NoInverterCoupling", r)
+            or ("No inverter within the coupling range (" .. r .. " tiles)"))
         return
     end
     for i = 1, #masters do

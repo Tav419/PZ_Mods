@@ -377,8 +377,15 @@ check(got == "M F", "range 40: 36 tiles offered, got '" .. got .. "'")
 couplingRange = 10
 local sub
 got, sub = coupleTargets(X)
-check(got == "" and sub and find(sub, "ContextMenu_LW_NoInverter") ~= nil
-    and texts["ContextMenu_LW_NoInverter"][1] == "10", "range 10: 'No inverter within 10 tiles'")
+check(got == "" and sub and find(sub, "No inverter within the coupling range (10 tiles)") ~= nil,
+    "range 10: 'No inverter within the coupling range (10 tiles)'")
+-- With a translation, the add-on's key gets the range.
+local textOrNull = getTextOrNull
+getTextOrNull = function(k, ...) texts[k] = { ... }; return k end
+got, sub = coupleTargets(X)
+getTextOrNull = textOrNull
+check(sub and find(sub, "ContextMenu_LWC_NoInverterCoupling") ~= nil
+    and texts["ContextMenu_LWC_NoInverterCoupling"][1] == "10", "translated: the coupling range message gets 10")
 couplingRange = 50
 unloaded[key(145, 100, 0)] = true
 got = coupleTargets(X)
