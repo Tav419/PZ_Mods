@@ -32,10 +32,30 @@ Replaced files, under `42.21/media/lua/`:
   slaves' zones too.
 - `server/LiveWire/LW_Computer.lua`: load shedding switches off lights in the
   slaves' zones too.
-- `client/LiveWire/LW_ContextMenu.lua`: coupled inverters have "Show range".
+- `client/LiveWire/LW_ContextMenu.lua`: coupled inverters have "Show range", and
+  every inverter has "Show all powered areas" (below).
+
+Added file: `client/LiveWireCoupling/LWC_ZonesView.lua` ("Show all powered
+areas").
 
 The breaker panel, the management computer (load shedding) and "Show range" now
 cover coupled inverters too.
+
+## Show all powered areas
+
+Right-click any inverter, then Live Wire > the inverter > **Show all powered
+areas**. It draws the powered area of every inverter coupled into the same
+network (the master and its slaves) at once, with a cross on each inverter.
+Where areas overlap, the inner arcs are faint, so the outer edge of the whole
+network stands out. Click it again (**Hide all powered areas**) to hide it.
+"Show range" still shows one inverter's area, and each view replaces the other.
+The view hides itself when you walk more than 60 tiles from every inverter.
+Only you see the circles you open.
+
+A circle also goes away about half a second after its inverter is picked up,
+salvaged or destroyed. That fix covers Live Wire's own "Show range" circle too,
+which otherwise stays on screen after its inverter is gone (only the drawing
+stayed: the inverter's power was already switched off).
 
 ## Before disabling or removing this add-on
 
@@ -46,6 +66,12 @@ powered zones afterwards, so they could stay powered.
 
 If the original Live Wire mod is updated, this add-on's copies of these files may
 need to be re-applied.
+
+## Version history
+
+- 1.1.0: "Show all powered areas" for inverters; circles of removed inverters
+  go away (including Live Wire's "Show range" circle).
+- 1.0.0: coupled inverters keep their own powered zone.
 
 ## Credits and license
 

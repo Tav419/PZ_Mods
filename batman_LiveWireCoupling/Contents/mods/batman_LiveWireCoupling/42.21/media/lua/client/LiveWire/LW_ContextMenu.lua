@@ -6,6 +6,7 @@
 -- command.
 if isServer() then return end
 require "LiveWire/LW_NetworkName"
+require "LiveWireCoupling/LWC_ZonesView"
 
 LiveWire = LiveWire or {}
 
@@ -169,13 +170,30 @@ function Menu.onConnections(player, obj)
 end
 
 function Menu.onShowRange(player, id, sq)
-    -- The inverter circle replaces a pump's taps view (a no-op when none is shown).
+    -- The inverter circle replaces a pump's taps view (a no-op when none is shown)
+    -- and the network's powered areas.
     LiveWire.PumpView.hide()
+    LiveWire.ZonesView.hide()
     if LiveWire.RangeView.isShown(id) then
         LiveWire.RangeView.hide()
     else
         LiveWire.RangeView.show(id, sq:getX(), sq:getY(), sq:getZ())
     end
+end
+
+-- Every inverter of the network at once (LWC_ZonesView.lua). It replaces the single
+-- inverter circle and a pump's taps view.
+function Menu.onShowAllZones(player, obj)
+    local ZV = LiveWire.ZonesView
+    local mark = LiveWire.Marks.get(obj)
+    if not mark or not obj:getSquare() then return end
+    if ZV.isShown(ZV.networkOf(mark)) then
+        ZV.hide()
+        return
+    end
+    LiveWire.PumpView.hide()
+    LiveWire.RangeView.hide()
+    ZV.show(ZV.collect(obj))
 end
 
 -- Pump: the blue circle and the highlights of the supplied taps (LW_PumpView.lua).
@@ -268,6 +286,16 @@ local function addMuffleOption(menu, player, obj, mark)
     end
 end
 
+-- Show or hide the powered areas of every inverter of the network. Add-on text,
+-- with an English fallback (the add-on ships no translation files).
+local function addAllZonesOption(menu, player, obj, mark)
+    local key, text = "ContextMenu_LWC_ShowAllZones", "Show all powered areas"
+    if LiveWire.ZonesView.isShown(LiveWire.ZonesView.networkOf(mark)) then
+        key, text = "ContextMenu_LWC_HideAllZones", "Hide all powered areas"
+    end
+    menu:addOption(getTextOrNull(key) or text, player, Menu.onShowAllZones, obj)
+end
+
 -- Slave inverter (coupled to a master): its screen is the master's, and it has no
 -- reset and no equipment lists. It keeps its own powered zone, so it shows its range.
 local function addSlaveOptions(menu, player, obj, mark)
@@ -285,6 +313,7 @@ local function addSlaveOptions(menu, player, obj, mark)
     local rangeKey = "ContextMenu_LW_ShowRange"
     if LiveWire.RangeView.isShown(mark.id) then rangeKey = "ContextMenu_LW_HideRange" end
     menu:addOption(getText(rangeKey), player, Menu.onShowRange, mark.id, obj:getSquare())
+    addAllZonesOption(menu, player, obj, mark)
 end
 
 -- Master or independent inverter: take a slave inverter in cable range (an inverter
@@ -326,6 +355,7 @@ local function addInverterOptions(menu, player, obj, mark)
     local rangeKey = "ContextMenu_LW_ShowRange"
     if LiveWire.RangeView.isShown(mark.id) then rangeKey = "ContextMenu_LW_HideRange" end
     menu:addOption(getText(rangeKey), player, Menu.onShowRange, mark.id, obj:getSquare())
+    addAllZonesOption(menu, player, obj, mark)
     addCoupleOptions(menu, player, obj)
 
     local around = I().objectsInRange(obj:getSquare(), nil, true)
