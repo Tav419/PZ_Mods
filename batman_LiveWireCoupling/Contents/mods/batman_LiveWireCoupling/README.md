@@ -33,10 +33,20 @@ Replaced files, under `42.21/media/lua/`:
 - `server/LiveWire/LW_Computer.lua`: load shedding switches off lights in the
   slaves' zones too.
 - `client/LiveWire/LW_ContextMenu.lua`: coupled inverters have "Show range", and
-  every inverter has "Show all powered areas" (below).
+  every inverter has "Show all powered areas" (below); "Couple to an inverter"
+  uses the coupling range (below).
 
-Added file: `client/LiveWireCoupling/LWC_ZonesView.lua` ("Show all powered
-areas").
+Added files, under `42.21/media/`:
+
+- `lua/client/LiveWireCoupling/LWC_ZonesView.lua`: "Show all powered areas".
+- `lua/shared/LiveWireCoupling/LWC_CouplingRange.lua`: makes Live Wire's
+  coupling check use the coupling range (it wraps `Install.checkCouple`, so
+  `LW_Install.lua` is not replaced) and finds far inverters through Live
+  Wire's anchor table.
+- `sandbox-options.txt`: the "Coupling range" option.
+- `lua/shared/Translate/EN/Sandbox.json`: the option's page title, name and
+  tooltip (other languages show the English text). It adds to Live Wire's
+  sandbox texts; it does not replace them.
 
 The breaker panel, the management computer (load shedding) and "Show range" now
 cover coupled inverters too.
@@ -57,6 +67,30 @@ salvaged or destroyed. That fix covers Live Wire's own "Show range" circle too,
 which otherwise stays on screen after its inverter is gone (only the drawing
 stayed: the inverter's power was already switched off).
 
+## Coupling range
+
+A sandbox option, on its own page **Live Wire: Coupled Inverter Zones**:
+**Coupling range (0 = same as Cable range)**, the farthest a coupled (slave)
+inverter can be from its master, 0 to 70 tiles, measured in a straight line.
+0 (the default) keeps Live Wire's behaviour: the same as "Cable range" on the
+Live Wire page. The cable range for equipment (lights, appliances,
+batteries...) does not change.
+
+- Coupling still needs the coupling kit, and wire for the distance as set by
+  "Tiles per electric wire" (1 wire per 4 tiles by default), so a longer
+  coupling takes more wire.
+- Live Wire's other coupling rules stay: up to 3 slaves per master, the floor
+  limit of "Cable vertical range", the Electrical level.
+- The master must be loaded when you couple: your game keeps about 70 tiles
+  loaded around you on a 1080p screen, less on smaller screens (about 48 tiles
+  at 1366x768). A master farther than that is not listed. With no master in
+  reach, the menu says "No inverter within the coupling range (N tiles)".
+- A coupled inverter's menu shows how far its master is, even past the cable
+  range, and "Show all powered areas" finds the whole network at any distance.
+- Lowering the option later does not uncouple inverters already coupled.
+- Tested on a dedicated server: couplings at 39, 63 and 69 tiles, with the
+  slaves following the master on and off.
+
 ## Before disabling or removing this add-on
 
 Uncouple all slave inverters first. The original mod doesn't clean up the extra
@@ -69,6 +103,8 @@ need to be re-applied.
 
 ## Version history
 
+- 1.2.0: "Coupling range" sandbox option, to couple inverters farther apart
+  than the cable range (up to 70 tiles).
 - 1.1.0: "Show all powered areas" for inverters; circles of removed inverters
   go away (including Live Wire's "Show range" circle).
 - 1.0.0: coupled inverters keep their own powered zone.
