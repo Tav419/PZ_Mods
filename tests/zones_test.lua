@@ -1,5 +1,5 @@
--- Offline test of the dev build's "Show all powered areas", with stubs for the
--- game's globals. Run by run_tests.py with Lua 5.1 (the game's Kahlua is 5.1).
+-- Offline test of the dev build's right-click menu: "Show all powered areas" and
+-- the coupling range in the menu, with stubs for the game's globals. Run by run_tests.py with Lua 5.1 (the game's Kahlua is 5.1).
 -- Globals set by the runner: MOD_LUA (path to the dev mod's media/lua folder).
 
 local fails, passes = 0, 0
@@ -17,10 +17,23 @@ Events = {
 }
 local loaded = {}
 function require(name)
-    if name == "LiveWireCoupling/LWC_ZonesView" and not loaded[name] then
+    local files = {
+        ["LiveWireCoupling/LWC_ZonesView"] = "/client/LiveWireCoupling/LWC_ZonesView.lua",
+        ["LiveWireCoupling/LWC_CouplingRange"] = "/shared/LiveWireCoupling/LWC_CouplingRange.lua",
+    }
+    if files[name] and not loaded[name] then
         loaded[name] = true
-        dofile(MOD_LUA .. "/client/LiveWireCoupling/LWC_ZonesView.lua")
+        dofile(MOD_LUA .. files[name])
     end
+end
+
+local couplingRange = 0   -- sandbox option LiveWireCoupling.CouplingRange
+function getSandboxOptions()
+    return { getOptionByName = function(_, name)
+        if name == "LiveWireCoupling.CouplingRange" then
+            return { getValue = function() return couplingRange end }
+        end
+    end }
 end
 
 local drawn = {}
@@ -61,8 +74,8 @@ function getSpecificPlayer() return player end
 function isoToScreenX(i, x, y, z) return x - y end
 function isoToScreenY(i, x, y, z) return x + y - z * 3 end
 
-local texts = {}
-function getText(key, ...) texts[key] = true; return key end
+local texts = {}   -- arguments of the last getText call for each key
+function getText(key, ...) texts[key] = { ... }; return key end
 function getTextOrNull(key) return nil end
 
 -- World: squares and inverters.
@@ -78,7 +91,7 @@ local function square(x, y, z)
     return sq
 end
 local world = {}
-local squares, unloaded = {}, {}
+local squares, unloaded, anchors = {}, {}, {}
 local function key(x, y, z) return x .. "," .. y .. "," .. z end
 function getCell()
     return { getGridSquare = function(_, x, y, z)
@@ -95,6 +108,7 @@ local function inverter(id, x, y, z, cpl)
     function o:getSquare() return self.sq end
     sq.objs[1] = o
     world[#world + 1] = o
+    anchors[id] = { x = x, y = y, z = z, on = true }   -- every inverter has an anchor
     return o
 end
 local M  = inverter("M", 100, 100, 0)
@@ -117,6 +131,7 @@ function RV.hide() RV.inverterId, RV.center, RV.opts = nil, nil, nil end
 function RV.show(id, x, y, z, opts) RV.inverterId, RV.center, RV.opts = id, { x = x, y = y, z = z }, opts end
 LiveWire.PumpView = { hide = function() end, isShown = function() return false end }
 LiveWire.Marks = { get = function(o) return o and o.mark end }
+LiveWire.Anchor = { table = function() return anchors end }
 function LiveWire.Marks.findOnSquare(sq, id)
     for _, o in ipairs(sq.objs) do if o.mark and o.mark.id == id then return o end end
 end
@@ -128,8 +143,11 @@ LiveWire.Install = {}
 function LiveWire.Install.invertersInRange(sq)
     local out = {}
     for _, o in ipairs(world) do
-        local d, dz = dist(sq, o:getSquare())
-        if d <= 30 and dz <= 3 then out[#out + 1] = { obj = o, dist = d, kind = "device" } end
+        local s = o:getSquare()
+        local d, dz = dist(sq, s)
+        if d <= 30 and dz <= 3 and not unloaded[key(s.x, s.y, s.z)] then
+            out[#out + 1] = { obj = o, dist = d, kind = "device" }
+        end
     end
     table.sort(out, function(a, b) return a.dist < b.dist end)
     return out
@@ -146,7 +164,13 @@ function LiveWire.Install.distance(x1, y1, z1, x2, y2, z2)
     return math.sqrt(dx * dx + dy * dy), math.abs(z1 - z2)
 end
 function LiveWire.Install.wiresFor(d) return math.max(1, math.ceil(d / 4)) end
-function LiveWire.Install.checkCouple() return true end
+-- Like Live Wire's: the distance check reads the cable range.
+function LiveWire.Install.checkCouple(character, slave, master)
+    local d = dist(slave:getSquare(), master:getSquare())
+    local range = LiveWire.Config.get("LinkRange")
+    if d > range then return false, "Tooltip_LW_TooFarForCable", tostring(math.ceil(d)), tostring(range) end
+    return true, nil, math.max(1, math.ceil(d / 4))
+end
 function LiveWire.Install.vanillaMark() return nil end
 function LiveWire.Install.isBarrelObject() return false end
 LiveWire.Defs = { devices = { Inverter = { role = "inverter" } } }
@@ -193,10 +217,10 @@ check(net == "M" and ids(c) == want, "slave collects the whole network, got " ..
 net, c = ZV.collect(X)
 check(net == "X" and ids(c) == "110,110,0", "independent inverter collects only itself, got " .. ids(c))
 -- Master not loaded: the slave still shows itself and what it can see.
-local savedM = table.remove(world, 1)
+unloaded[key(100, 100, 0)] = true
 net, c = ZV.collect(S2)
-check(net == "M" and ids(c):find("100,125,1", 1, true) ~= nil, "slave with master unloaded still shows itself")
-table.insert(world, 1, savedM)
+check(net == "M" and ids(c) == "100,125,1 120,100,0", "slave with master unloaded shows itself and S1, got " .. ids(c))
+unloaded[key(100, 100, 0)] = nil
 
 ---------------------------------------------------------------- render()
 local function render()
@@ -328,6 +352,53 @@ RV.show("P", 300, 300, 0, { radius = 10 })
 runTicks(ZV.CHECK_TICKS or 30)
 check(RV.inverterId == "P", "a pump's circle is not touched")
 RV.hide()
+
+---------------------------------------------------------------- coupling range
+local F = inverter("F", 145, 100, 0)          -- 36 tiles from X: past the cable range
+local G = inverter("G", 185, 100, 0, "F")     -- slave of F, 40 tiles from it
+-- Masters offered in Live Wire > X > Couple to an inverter, and the submenu.
+local function coupleTargets(obj)
+    local co = find(openMenu(obj), "ContextMenu_LW_CoupleTo")
+    local out = {}
+    for _, o in ipairs(co and co.sub and co.sub.options or {}) do
+        if o.fn then out[#out + 1] = o.args[2].mark.id .. (o.notAvailable and "!" or "") end
+    end
+    return table.concat(out, " "), co and co.sub
+end
+couplingRange = 0
+local got = coupleTargets(X)
+check(got == "M", "range 0: only masters within the cable range, got '" .. got .. "'")
+couplingRange = 50
+got = coupleTargets(X)
+check(got == "M F", "range 50: the far master is offered and allowed, got '" .. got .. "'")
+couplingRange = 40
+got = coupleTargets(X)
+check(got == "M F", "range 40: 36 tiles offered, got '" .. got .. "'")
+couplingRange = 10
+local sub
+got, sub = coupleTargets(X)
+check(got == "" and sub and find(sub, "ContextMenu_LW_NoInverter") ~= nil
+    and texts["ContextMenu_LW_NoInverter"][1] == "10", "range 10: 'No inverter within 10 tiles'")
+couplingRange = 50
+unloaded[key(145, 100, 0)] = true
+got = coupleTargets(X)
+check(got == "M", "a master on an unloaded square is not offered, got '" .. got .. "'")
+-- A slave coupled past the cable range sees its master's distance.
+unloaded[key(145, 100, 0)] = nil
+local gm = openMenu(G)
+check(find(gm, "ContextMenu_LW_CoupledTo") ~= nil and texts["ContextMenu_LW_CoupledTo"][1] == "40",
+    "slave 40 tiles away: 'Coupled to the inverter 40 tiles away'")
+unloaded[key(145, 100, 0)] = true
+gm = openMenu(G)
+check(find(gm, "ContextMenu_LW_CoupledFar") ~= nil, "master not loaded: 'Coupled to an inverter out of sight'")
+unloaded[key(145, 100, 0)] = nil
+-- Show all powered areas finds the whole network past the cable range.
+net, c = ZV.collect(G)
+check(net == "F" and ids(c) == "145,100,0 185,100,0", "far slave collects its master, got " .. ids(c))
+net, c = ZV.collect(F)
+check(net == "F" and ids(c) == "145,100,0 185,100,0", "master collects its far slave, got " .. ids(c))
+check(LiveWire.Config.get("LinkRange") == 30, "the cable range is unchanged after the menus")
+couplingRange = 0
 
 print(string.format("%d passed, %d failed", passes, fails))
 return fails

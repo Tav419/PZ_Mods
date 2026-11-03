@@ -12,6 +12,7 @@
 if isServer() then return end
 
 require "ISUI/ISUIElement"
+require "LiveWireCoupling/LWC_CouplingRange"
 
 LiveWire = LiveWire or {}
 
@@ -105,16 +106,16 @@ function ZV.hide()
     ZV.networkId, ZV.centers = nil, nil
 end
 
--- Squares of the inverters of `obj`'s network: the master and its slaves. A slave
--- is always coupled within cable range of its master, so they are looked for on the
--- loaded squares within cable range of the master (of `obj` itself when the master
--- is not loaded). `obj` is always included.
+-- Squares of the inverters of `obj`'s network: the master and its slaves, on loaded
+-- squares at any distance (a slave can be coupled past the cable range,
+-- LWC_CouplingRange.lua). They are looked for from the master (from `obj` itself
+-- when the master is not loaded). `obj` is always included.
 function ZV.collect(obj)
-    local I = LiveWire.Install
+    local CR = LiveWire.CouplingRange
     local mark = LiveWire.Marks.get(obj)
     local netId = ZV.networkOf(mark)
     local base = obj
-    if mark.cpl then base = I.inverterById(obj:getSquare(), mark.cpl) or obj end
+    if mark.cpl then base = CR.inverterById(obj:getSquare(), mark.cpl) or obj end
     local centers, seen = {}, {}
     local function add(o, id)
         if seen[id] then return end
@@ -123,7 +124,7 @@ function ZV.collect(obj)
         centers[#centers + 1] = { x = sq:getX(), y = sq:getY(), z = sq:getZ(), id = id }
     end
     add(obj, mark.id)
-    local list = I.invertersInRange(base:getSquare())
+    local list = CR.inverters(base:getSquare(), nil)
     for i = 1, #list do
         local m = LiveWire.Marks.get(list[i].obj)
         if m and (m.id == netId or m.cpl == netId) then add(list[i].obj, m.id) end

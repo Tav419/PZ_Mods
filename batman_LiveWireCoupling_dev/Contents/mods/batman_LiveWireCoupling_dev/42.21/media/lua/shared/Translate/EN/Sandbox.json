@@ -1,0 +1,4 @@
+{
+    "Sandbox_LiveWireCoupling_CouplingRange": "Coupling range",
+    "Sandbox_LiveWireCoupling_CouplingRange_tooltip": "Maximum distance in tiles between a coupled inverter and its master (Coupled Inverter Zones add-on). 0 = same as Cable range. The master must be within the area loaded around the player: about 70 tiles on a 1080p screen, less on smaller screens."
+}

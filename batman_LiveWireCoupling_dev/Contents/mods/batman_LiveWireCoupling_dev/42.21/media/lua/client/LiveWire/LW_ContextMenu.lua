@@ -7,6 +7,7 @@
 if isServer() then return end
 require "LiveWire/LW_NetworkName"
 require "LiveWireCoupling/LWC_ZonesView"
+require "LiveWireCoupling/LWC_CouplingRange"
 
 LiveWire = LiveWire or {}
 
@@ -300,7 +301,8 @@ end
 -- reset and no equipment lists. It keeps its own powered zone, so it shows its range.
 local function addSlaveOptions(menu, player, obj, mark)
     addSwitchOptions(menu, player, mark)
-    local invObj = I().inverterById(obj:getSquare(), mark.cpl)
+    -- The master can be farther than the cable range (LWC_CouplingRange.lua).
+    local invObj = LiveWire.CouplingRange.inverterById(obj:getSquare(), mark.cpl)
     if invObj then
         local sq, is = obj:getSquare(), invObj:getSquare()
         local d = I().distance(sq:getX(), sq:getY(), sq:getZ(), is:getX(), is:getY(), is:getZ())
@@ -316,10 +318,12 @@ local function addSlaveOptions(menu, player, obj, mark)
     addAllZonesOption(menu, player, obj, mark)
 end
 
--- Master or independent inverter: take a slave inverter in cable range (an inverter
--- already coupled cannot be a master, and a slave never takes another slave).
+-- Master or independent inverter: take a slave inverter in coupling range (an inverter
+-- already coupled cannot be a master, and a slave never takes another slave). The
+-- coupling range is the add-on's sandbox option (LWC_CouplingRange.lua).
 local function addCoupleOptions(menu, player, obj)
-    local inverters = I().invertersInRange(obj:getSquare())
+    local range = LiveWire.CouplingRange.get()
+    local inverters = LiveWire.CouplingRange.inverters(obj:getSquare(), range)
     local masters = {}
     for i = 1, #inverters do
         local m = LiveWire.Marks.get(inverters[i].obj)
@@ -329,7 +333,7 @@ local function addCoupleOptions(menu, player, obj)
     local csub = ISContextMenu:getNew(menu)
     menu:addSubMenu(co, csub)
     if #masters == 0 then
-        disabled(csub, getText("ContextMenu_LW_NoInverter", tostring(LiveWire.Config.get("LinkRange"))))
+        disabled(csub, getText("ContextMenu_LW_NoInverter", tostring(range)))
         return
     end
     for i = 1, #masters do
