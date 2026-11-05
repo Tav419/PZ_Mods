@@ -283,6 +283,28 @@ function Registry.hasOption(grid, kind)
     return nil
 end
 
+-- Delete a master's grid: its slaves become independent, its members are left
+-- unlinked and its linked vanilla objects are forgotten. Also used for a grid whose
+-- inverter vanished from the registry, whose public anchor is then removed too.
+function Registry.dropGrid(g)
+    if LiveWire.Circuits then LiveWire.Circuits.release(g, true) end
+    -- The slaves lose their master: each becomes an independent inverter.
+    local slaves = Registry.slaves(g)
+    for i = 1, #slaves do Registry.uncouple(slaves[i]) end
+    local vanilla = {}
+    for mid in pairs(g.members) do
+        local m = data().devices[mid]
+        if m then
+            m.grid = nil
+            if m.role == "backup" or m.role == "computer" then vanilla[#vanilla + 1] = m end
+        end
+    end
+    data().grids[g.id] = nil
+    for i = 1, #vanilla do Registry.forgetVanilla(vanilla[i]) end
+    local a = g.inverter and not data().devices[g.inverter] and Registry.anchors[g.inverter]
+    if a then Registry.setAnchor({ id = g.inverter, x = a.x, y = a.y, z = a.z }, nil) end
+end
+
 function Registry.removeDevice(id)
     local dev = data().devices[id]
     if not dev then return end
@@ -298,22 +320,7 @@ function Registry.removeDevice(id)
     end
     if dev.role == "inverter" then
         local g = dev.grid and data().grids[dev.grid]
-        if g then
-            if LiveWire.Circuits then LiveWire.Circuits.release(g, true) end
-            -- The slaves lose their master: each becomes an independent inverter.
-            local slaves = Registry.slaves(g)
-            for i = 1, #slaves do Registry.uncouple(slaves[i]) end
-            local vanilla = {}
-            for mid in pairs(g.members) do
-                local m = data().devices[mid]
-                if m then
-                    m.grid = nil
-                    if m.role == "backup" or m.role == "computer" then vanilla[#vanilla + 1] = m end
-                end
-            end
-            data().grids[g.id] = nil
-            for i = 1, #vanilla do Registry.forgetVanilla(vanilla[i]) end
-        end
+        if g then Registry.dropGrid(g) end
         Registry.setAnchor(dev, nil)
     else
         Registry.unlink(dev)

@@ -251,12 +251,41 @@ handlers[P.C_UNLINK_BARREL] = function(player, args)
     LiveWire.notify(player, "IGUI_LW_BarrelUnlinked", {})
 end
 
+-- Same overload test as the simulation trip (LW_Simulation.lua stepGrid): house
+-- demand plus the pumps against the capacity in service. Returns the notification
+-- arguments when the master would trip again at once, nil otherwise.
+local function overload(inv, grid)
+    -- Whole network: the master's zone plus its in-service slaves' zones.
+    local demand
+    if grid then demand = LiveWire.Demand.measureGrid(grid, inv) else demand = LiveWire.Demand.measure(inv) end
+    demand = demand or (grid and grid.demand) or 0
+    if grid then grid.demand = demand end
+    local total = demand + (grid and grid.pumpW or 0)
+    local def = LiveWire.Defs.devices[inv.model]
+    local cap = grid and LiveWire.Sim.capacityW(grid) or (def and def.maxW)
+    if cap and total > cap then
+        return { tostring(math.floor(total + 0.5)), tostring(cap) }
+    end
+end
+
 handlers[P.C_SET_INVERTER] = function(player, args)
     local dev, why = checkInverterCommand(player, args)
     if not dev then return refuse(player, P.C_SET_INVERTER, why) end
     if dev.role ~= "inverter" or not P.isBool(args.on) then return end
     if args.on then
-        if dev.state == "off" then dev.state = "on" end
+        if dev.state == "off" then
+            dev.state = "on"
+            -- Switching a master back on runs the reset test: isolating a tripped
+            -- unit then switching it on must not bypass it. A slave only adds
+            -- capacity; with a breaker, the breaker trips and the inverter still charges.
+            local grid = LiveWire.Registry.grid(dev.grid)
+            local stuck = not dev.coupled and not (grid and LiveWire.Registry.hasOption(grid, "breaker"))
+                and overload(dev, grid)
+            if stuck then
+                dev.state = "off"
+                return LiveWire.notify(player, "IGUI_LW_StillOverloaded", stuck, true)
+            end
+        end
     else
         -- Explicit isolation must remain available after a trip or a failure.
         dev.state = "off"
@@ -271,17 +300,8 @@ handlers[P.C_RESET] = function(player, args)
     if dev.coupled then dev = LiveWire.Registry.device(dev.coupled) or dev end
     if dev.role ~= "inverter" or dev.state ~= "tripped" then return end
     local grid = LiveWire.Registry.grid(dev.grid)
-    local def = LiveWire.Defs.devices[dev.model]
-    -- Whole network: the master's zone plus its in-service slaves' zones.
-    local demand
-    if grid then demand = LiveWire.Demand.measureGrid(grid, dev) else demand = LiveWire.Demand.measure(dev) end
-    demand = demand or (grid and grid.demand) or 0
-    if grid then grid.demand = demand end
-    local cap = grid and LiveWire.Sim.capacityW(grid) or (def and def.maxW)
-    if cap and demand > cap then
-        return LiveWire.notify(player, "IGUI_LW_StillOverloaded",
-            { tostring(math.floor(demand + 0.5)), tostring(cap) }, true)
-    end
+    local stuck = overload(dev, grid)
+    if stuck then return LiveWire.notify(player, "IGUI_LW_StillOverloaded", stuck, true) end
     dev.state = "on"
     LiveWire.Xp.awardLimited(player, "reset:" .. dev.id, 5, 1)
     LiveWire.Sim.refresh(grid)
@@ -296,13 +316,8 @@ handlers[P.C_RESET_BREAKER] = function(player, args)
     local grid = dev.grid and LiveWire.Registry.grid(dev.grid)
     local inv = grid and LiveWire.Registry.device(grid.inverter)
     if inv then
-        local demand = LiveWire.Demand.measureGrid(grid, inv) or grid.demand or 0
-        grid.demand = demand
-        local cap = LiveWire.Sim.capacityW(grid)
-        if demand > cap then
-            return LiveWire.notify(player, "IGUI_LW_StillOverloaded",
-                { tostring(math.floor(demand + 0.5)), tostring(cap) }, true)
-        end
+        local stuck = overload(inv, grid)
+        if stuck then return LiveWire.notify(player, "IGUI_LW_StillOverloaded", stuck, true) end
     end
     dev.state = "ok"
     LiveWire.Xp.awardLimited(player, "reset:" .. dev.id, 5, 1)

@@ -2,7 +2,7 @@
 -- A real vanilla desktop computer of the map (Mov_DesktopComputer, sprite
 -- appliances_com_01_72, media/scripts/generated/items/moveable.txt), wired to an
 -- inverter. While it is powered it adds to the network: a 48-hour history, a
--- forecast until sunrise and, from Electrical 7, load shedding (lights are switched
+-- forecast until sunrise and load shedding (lights are switched
 -- off first when the stock gets low, to keep the fridge running).
 -- The link is kept in the computer ModData under its own key, so the vanilla
 -- object stays untouched otherwise.
@@ -96,7 +96,6 @@ function Computer.shed(grid, inv, dev, stockFrac)
     if not stockFrac then return end
     if stockFrac >= Computer.SHED_RESET then grid.shed = nil return end
     if grid.shed or stockFrac >= Computer.SHED_BELOW then return end
-    if (dev.level or 0) < LiveWire.Config.requiredLevel(LiveWire.Defs.SHED_LEVEL) then return end
     local entry = LiveWire.Demand.inventories[inv.id]
     if not entry then return end
     -- The master's zone first, then the zone of every in-service coupled inverter.
