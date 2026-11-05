@@ -43,3 +43,20 @@ versionMin=42.0.0
 3. Restart the server.
 
 Mods that aren't on the Workshop don't auto-download to players, so anyone joining needs a local copy too.
+
+## Offline tests
+
+`tests/` holds offline tests for the Live Wire add-on: a syntax check of every Lua
+file plus test scripts that run the add-on's code with stand-ins for the game.
+They need Lua 5.1 through the `lupa` package, in a local environment (`.venv`,
+ignored by git). Create it once:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install "lupa==2.8"
+```
+
+Then run them against the release (or the dev copy's `media/lua` folder):
+
+```bash
+.venv/bin/python tests/run_tests.py batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/42.21/media/lua tests/zones_test.lua tests/coupling_range_test.lua tests/screen_range_test.lua
+```

@@ -2,11 +2,14 @@
 
 Usage: run_tests.py <mod media/lua dir> <test.lua> [<test.lua> ...]
 
-Needs the lupa package (pip install lupa), which bundles Lua 5.1. Each test file
-runs in a fresh Lua state. Example, from the repo root:
-    python3 tests/run_tests.py \
-        batman_LiveWireCoupling_dev/Contents/mods/batman_LiveWireCoupling_dev/42.21/media/lua \
-        tests/zones_test.lua tests/coupling_range_test.lua
+Needs the lupa package, which bundles Lua 5.1. It lives in the repo's own
+environment (.venv, ignored by git). To create it once, from the repo root:
+    python3 -m venv .venv && .venv/bin/pip install "lupa==2.8"
+Each test file runs in a fresh Lua state. Example, from the repo root:
+    .venv/bin/python tests/run_tests.py \
+        batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/42.21/media/lua \
+        tests/zones_test.lua tests/coupling_range_test.lua tests/screen_range_test.lua
+Use the dev copy's media/lua folder to test a dev build.
 """
 import pathlib
 import sys

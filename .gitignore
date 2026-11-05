@@ -6,6 +6,9 @@ desktop.ini
 *~
 .idea/
 
+# Test environment (tests/run_tests.py)
+.venv/
+
 # Packaging output
 /dist/
 /build/
