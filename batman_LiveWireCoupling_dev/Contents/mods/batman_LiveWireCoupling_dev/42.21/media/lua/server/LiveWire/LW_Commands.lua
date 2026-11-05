@@ -99,14 +99,41 @@ function Commands.checkVia(player, via, inv)
     return false
 end
 
+-- Coupled inverters (slaves) belong to their master's network and can be farther than
+-- the cable range from it (Coupling range, LWC_CouplingRange.lua). Clicking one opens
+-- the master's screen (LW_Equipment.lua), so standing at any inverter of the network
+-- counts as standing at the master for that screen (LWC_ScreenRange.lua).
+-- The master and the slaves of `inv`'s network.
+function Commands.networkInverters(inv)
+    local grid = inv and inv.grid and LiveWire.Registry.grid(inv.grid)
+    if not grid then return {} end
+    local out = {}
+    local master = LiveWire.Registry.device(grid.inverter)
+    if master then out[1] = master end
+    local slaves = LiveWire.Registry.slaves(grid)
+    for i = 1, #slaves do out[#out + 1] = slaves[i] end
+    return out
+end
+
 -- An inverter command (switch, reset): from the inverter itself, or from the
--- management software on a computer of its network.
+-- management software on a computer of its network, or for a master from one of its
+-- coupled inverters (its screen).
 local function checkInverterCommand(player, args)
     local dev, why = Commands.checkDevice(player, args.inverter)
     if dev then return dev end
     local inv = P.isDeviceId(args.inverter) and LiveWire.Registry.device(args.inverter)
     if inv and inv.role == "inverter" and Commands.checkVia(player, args.via, inv) then
         return inv
+    end
+    if inv and inv.role == "inverter" and not inv.coupled and why == "Tooltip_LW_TooFar" then
+        local msq = getCell():getGridSquare(inv.x, inv.y, inv.z)
+        if msq and SafeHouse and not SafeHouse.isSafehouseAllowInteract(msq, player) then
+            return nil, "Tooltip_LW_Safehouse"
+        end
+        local list = Commands.networkInverters(inv)
+        for i = 1, #list do
+            if list[i].id ~= inv.id and Commands.checkDevice(player, list[i].id) then return inv end
+        end
     end
     return nil, why
 end
@@ -175,9 +202,20 @@ end
 handlers[P.C_SUBSCRIBE] = function(player, args)
     local grid, inv = gridOfInverter(args.inverter)
     if not grid then return end
-    if not Commands.isNear(player, inv.x, inv.y, inv.z, LiveWire.Sim.SUBSCRIBE_RANGE,
-            LiveWire.Config.verticalRange())
-        and not Commands.checkVia(player, args.via, inv) then
+    local range, floors = LiveWire.Sim.SUBSCRIBE_RANGE, LiveWire.Config.verticalRange()
+    local near = Commands.isNear(player, inv.x, inv.y, inv.z, range, floors)
+    if not near then
+        -- Or near another inverter of the network (a coupled one opens the master's screen).
+        local list = Commands.networkInverters(inv)
+        for i = 1, #list do
+            local d = list[i]
+            if Commands.isNear(player, d.x, d.y, d.z, range, floors) then
+                near = true
+                break
+            end
+        end
+    end
+    if not near and not Commands.checkVia(player, args.via, inv) then
         return
     end
     LiveWire.Sim.subscribe(player, grid.id)

@@ -352,14 +352,27 @@ function Sim.publish(grid)
     local list = Sim.subscribers[grid.id]
     if not list then return end
     local inv = LiveWire.Registry.device(grid.inverter)
-    local snap = nil
+    local snap, slaves = nil, nil
     local nowMs = getTimestampMs()
+    local r2 = Sim.SUBSCRIBE_RANGE * Sim.SUBSCRIBE_RANGE
     for name, sub in pairs(list) do
         local p = sub.player
         local ok = p and not p:isDead() and sub.expires > nowMs and inv
         if ok then
             local dx, dy = p:getX() - inv.x, p:getY() - inv.y
-            ok = dx * dx + dy * dy <= Sim.SUBSCRIBE_RANGE * Sim.SUBSCRIBE_RANGE
+            ok = dx * dx + dy * dy <= r2
+            -- Or near one of its coupled inverters, which open the master's screen
+            -- (LWC_ScreenRange.lua) and can be past the cable range.
+            if not ok then
+                slaves = slaves or LiveWire.Registry.slaves(grid)
+                for i = 1, #slaves do
+                    dx, dy = p:getX() - slaves[i].x, p:getY() - slaves[i].y
+                    if dx * dx + dy * dy <= r2 then
+                        ok = true
+                        break
+                    end
+                end
+            end
         end
         if ok then
             snap = snap or Sim.snapshot(grid)
