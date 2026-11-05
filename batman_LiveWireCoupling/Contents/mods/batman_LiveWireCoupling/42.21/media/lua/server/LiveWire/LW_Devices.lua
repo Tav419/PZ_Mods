@@ -332,11 +332,20 @@ function Devices.endRotation()
     for id in pairs(left) do Devices.remove(id) end
 end
 
--- Drop the devices of a loaded square whose object is gone.
+-- Drop the devices of a loaded square whose object is gone, after MISSING_CHECKS
+-- consecutive checks (chunk load, then each simulation tick): one transient miss
+-- never deletes a device and its links. Every removal goes through Devices.remove.
+-- Returns true when the object is present or its square is not loaded.
+Devices.MISSING_CHECKS = 2
 function Devices.validate(dev)
     local sq = getCell():getGridSquare(dev.x, dev.y, dev.z)
     if not sq then return true end
-    if Devices.find(dev) then return true end
+    if Devices.find(dev) then
+        dev.missing = nil
+        return true
+    end
+    dev.missing = (dev.missing or 0) + 1
+    if dev.missing < Devices.MISSING_CHECKS then return false end
     LiveWire.warn("device " .. dev.id .. " (" .. tostring(dev.model) .. ") is gone, removing it")
     Devices.remove(dev.id)
     return false

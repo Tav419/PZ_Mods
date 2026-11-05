@@ -1,6 +1,6 @@
 name=Live Wire: Coupled Inverter Zones
 id=batman_LiveWireCoupling
 require=batman_LiveWire
-description=Patch for Live Wire by batman-fr (cyberbobjr on GitHub), Workshop ID 3821807453: https://steamcommunity.com/sharedfiles/filedetails/?id=3821807453. Coupled inverters keep their own powered zone while the network shares one load and one capacity. Adds "Show all powered areas" to inverters, and a "Coupling range" sandbox option (own page) to couple inverters farther apart than the cable range. Requires the original Live Wire mod. Unofficial add-on, not made by batman-fr (cyberbobjr on GitHub).
+description=Patch for Live Wire by batman-fr (cyberbobjr on GitHub), Workshop ID 3821807453: https://steamcommunity.com/sharedfiles/filedetails/?id=3821807453. Coupled inverters and inverter cabinets keep their own powered zone while the network shares one load and one capacity. Adds "Show all powered areas" to inverters, and a "Coupling range" sandbox option (own page) to couple inverters farther apart than the cable range. Made for Live Wire 1.7.0. Requires the original Live Wire mod. Unofficial add-on, not made by batman-fr (cyberbobjr on GitHub).
 versionMin=42.21
-modversion=1.2.0
+modversion=1.3.0

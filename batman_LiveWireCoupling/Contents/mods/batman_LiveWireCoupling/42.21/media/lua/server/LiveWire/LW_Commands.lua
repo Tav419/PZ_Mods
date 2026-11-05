@@ -99,14 +99,41 @@ function Commands.checkVia(player, via, inv)
     return false
 end
 
+-- Coupled inverters (slaves) belong to their master's network and can be farther than
+-- the cable range from it (Coupling range, LWC_CouplingRange.lua). Clicking one opens
+-- the master's screen (LW_Equipment.lua), so standing at any inverter of the network
+-- counts as standing at the master for that screen (LWC_ScreenRange.lua).
+-- The master and the slaves of `inv`'s network.
+function Commands.networkInverters(inv)
+    local grid = inv and inv.grid and LiveWire.Registry.grid(inv.grid)
+    if not grid then return {} end
+    local out = {}
+    local master = LiveWire.Registry.device(grid.inverter)
+    if master then out[1] = master end
+    local slaves = LiveWire.Registry.slaves(grid)
+    for i = 1, #slaves do out[#out + 1] = slaves[i] end
+    return out
+end
+
 -- An inverter command (switch, reset): from the inverter itself, or from the
--- management software on a computer of its network.
+-- management software on a computer of its network, or for a master from one of its
+-- coupled inverters (its screen).
 local function checkInverterCommand(player, args)
     local dev, why = Commands.checkDevice(player, args.inverter)
     if dev then return dev end
     local inv = P.isDeviceId(args.inverter) and LiveWire.Registry.device(args.inverter)
     if inv and inv.role == "inverter" and Commands.checkVia(player, args.via, inv) then
         return inv
+    end
+    if inv and inv.role == "inverter" and not inv.coupled and why == "Tooltip_LW_TooFar" then
+        local msq = getCell():getGridSquare(inv.x, inv.y, inv.z)
+        if msq and SafeHouse and not SafeHouse.isSafehouseAllowInteract(msq, player) then
+            return nil, "Tooltip_LW_Safehouse"
+        end
+        local list = Commands.networkInverters(inv)
+        for i = 1, #list do
+            if list[i].id ~= inv.id and Commands.checkDevice(player, list[i].id) then return inv end
+        end
     end
     return nil, why
 end
@@ -175,9 +202,20 @@ end
 handlers[P.C_SUBSCRIBE] = function(player, args)
     local grid, inv = gridOfInverter(args.inverter)
     if not grid then return end
-    if not Commands.isNear(player, inv.x, inv.y, inv.z, LiveWire.Sim.SUBSCRIBE_RANGE,
-            LiveWire.Config.verticalRange())
-        and not Commands.checkVia(player, args.via, inv) then
+    local range, floors = LiveWire.Sim.SUBSCRIBE_RANGE, LiveWire.Config.verticalRange()
+    local near = Commands.isNear(player, inv.x, inv.y, inv.z, range, floors)
+    if not near then
+        -- Or near another inverter of the network (a coupled one opens the master's screen).
+        local list = Commands.networkInverters(inv)
+        for i = 1, #list do
+            local d = list[i]
+            if Commands.isNear(player, d.x, d.y, d.z, range, floors) then
+                near = true
+                break
+            end
+        end
+    end
+    if not near and not Commands.checkVia(player, args.via, inv) then
         return
     end
     LiveWire.Sim.subscribe(player, grid.id)
@@ -251,12 +289,41 @@ handlers[P.C_UNLINK_BARREL] = function(player, args)
     LiveWire.notify(player, "IGUI_LW_BarrelUnlinked", {})
 end
 
+-- Same overload test as the simulation trip (LW_Simulation.lua stepGrid): house
+-- demand plus the pumps against the capacity in service. Returns the notification
+-- arguments when the master would trip again at once, nil otherwise.
+local function overload(inv, grid)
+    -- Whole network: the master's zone plus its in-service slaves' zones.
+    local demand
+    if grid then demand = LiveWire.Demand.measureGrid(grid, inv) else demand = LiveWire.Demand.measure(inv) end
+    demand = demand or (grid and grid.demand) or 0
+    if grid then grid.demand = demand end
+    local total = demand + (grid and grid.pumpW or 0)
+    local def = LiveWire.Defs.devices[inv.model]
+    local cap = grid and LiveWire.Sim.capacityW(grid) or (def and def.maxW)
+    if cap and total > cap then
+        return { tostring(math.floor(total + 0.5)), tostring(cap) }
+    end
+end
+
 handlers[P.C_SET_INVERTER] = function(player, args)
     local dev, why = checkInverterCommand(player, args)
     if not dev then return refuse(player, P.C_SET_INVERTER, why) end
     if dev.role ~= "inverter" or not P.isBool(args.on) then return end
     if args.on then
-        if dev.state == "off" then dev.state = "on" end
+        if dev.state == "off" then
+            dev.state = "on"
+            -- Switching a master back on runs the reset test: isolating a tripped
+            -- unit then switching it on must not bypass it. A slave only adds
+            -- capacity; with a breaker, the breaker trips and the inverter still charges.
+            local grid = LiveWire.Registry.grid(dev.grid)
+            local stuck = not dev.coupled and not (grid and LiveWire.Registry.hasOption(grid, "breaker"))
+                and overload(dev, grid)
+            if stuck then
+                dev.state = "off"
+                return LiveWire.notify(player, "IGUI_LW_StillOverloaded", stuck, true)
+            end
+        end
     else
         -- Explicit isolation must remain available after a trip or a failure.
         dev.state = "off"
@@ -271,17 +338,8 @@ handlers[P.C_RESET] = function(player, args)
     if dev.coupled then dev = LiveWire.Registry.device(dev.coupled) or dev end
     if dev.role ~= "inverter" or dev.state ~= "tripped" then return end
     local grid = LiveWire.Registry.grid(dev.grid)
-    local def = LiveWire.Defs.devices[dev.model]
-    -- Whole network: the master's zone plus its in-service slaves' zones.
-    local demand
-    if grid then demand = LiveWire.Demand.measureGrid(grid, dev) else demand = LiveWire.Demand.measure(dev) end
-    demand = demand or (grid and grid.demand) or 0
-    if grid then grid.demand = demand end
-    local cap = grid and LiveWire.Sim.capacityW(grid) or (def and def.maxW)
-    if cap and demand > cap then
-        return LiveWire.notify(player, "IGUI_LW_StillOverloaded",
-            { tostring(math.floor(demand + 0.5)), tostring(cap) }, true)
-    end
+    local stuck = overload(dev, grid)
+    if stuck then return LiveWire.notify(player, "IGUI_LW_StillOverloaded", stuck, true) end
     dev.state = "on"
     LiveWire.Xp.awardLimited(player, "reset:" .. dev.id, 5, 1)
     LiveWire.Sim.refresh(grid)
@@ -296,13 +354,8 @@ handlers[P.C_RESET_BREAKER] = function(player, args)
     local grid = dev.grid and LiveWire.Registry.grid(dev.grid)
     local inv = grid and LiveWire.Registry.device(grid.inverter)
     if inv then
-        local demand = LiveWire.Demand.measureGrid(grid, inv) or grid.demand or 0
-        grid.demand = demand
-        local cap = LiveWire.Sim.capacityW(grid)
-        if demand > cap then
-            return LiveWire.notify(player, "IGUI_LW_StillOverloaded",
-                { tostring(math.floor(demand + 0.5)), tostring(cap) }, true)
-        end
+        local stuck = overload(inv, grid)
+        if stuck then return LiveWire.notify(player, "IGUI_LW_StillOverloaded", stuck, true) end
     end
     dev.state = "ok"
     LiveWire.Xp.awardLimited(player, "reset:" .. dev.id, 5, 1)

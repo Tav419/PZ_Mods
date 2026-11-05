@@ -12,6 +12,8 @@ its files with modified copies.
 In Live Wire, coupling an inverter to another one only adds capacity: the coupled
 (slave) inverter loses its own powered zone. With this add-on, a coupled inverter
 keeps its own zone, while the whole network still shares one load and one capacity.
+It works the same with Live Wire's inverter cabinet: a coupled cabinet keeps its own
+zone, and the network's capacity adds up each inverter's own rating.
 
 Replaced files, under `42.21/media/lua/`:
 
@@ -22,12 +24,14 @@ Replaced files, under `42.21/media/lua/`:
   or not, switches its anchor off.
 - `server/LiveWire/LW_Simulation.lua`: a master's in-service slaves follow its
   on/off state, each in its own zone; the network's demand is measured across all
-  zones.
+  zones; the inverter screen's updates reach a player at any inverter of the
+  network.
 - `server/LiveWire/LW_Demand.lua`: slaves keep their own appliance inventory;
   inverters of the same network count each overlapping appliance only once; new
   `Demand.measureGrid` adds up the zones.
 - `server/LiveWire/LW_Commands.lua`: resetting a tripped inverter or wall breaker
-  checks the whole network's demand.
+  checks the whole network's demand; the inverter screen's data and its I/O and
+  Reset buttons work from any inverter of the network.
 - `server/LiveWire/LW_Circuits.lua`: the breaker panel's circuits apply to the
   slaves' zones too.
 - `server/LiveWire/LW_Computer.lua`: load shedding switches off lights in the
@@ -39,6 +43,9 @@ Replaced files, under `42.21/media/lua/`:
 Added files, under `42.21/media/`:
 
 - `lua/client/LiveWireCoupling/LWC_ZonesView.lua`: "Show all powered areas".
+- `lua/client/LiveWireCoupling/LWC_ScreenRange.lua`: keeps the inverter screen
+  open near any inverter of the network (it wraps the screen's update, so
+  `LW_InverterPanel.lua` is not replaced).
 - `lua/shared/LiveWireCoupling/LWC_CouplingRange.lua`: makes Live Wire's
   coupling check use the coupling range (it wraps `Install.checkCouple`, so
   `LW_Install.lua` is not replaced) and finds far inverters through Live
@@ -91,6 +98,14 @@ batteries...) does not change.
 - Tested on a dedicated server: couplings at 39, 63 and 69 tiles, with the
   slaves following the master on and off.
 
+## Inverter screen
+
+Clicking a coupled inverter opens its master's screen, which shows the whole
+network. The screen stays open while you are within 30 tiles of any inverter of
+the network, so it also works at a slave coupled far from its master. Its I/O and
+Reset buttons work within 3 tiles of any inverter of the network. In multiplayer
+the server checks the same distances, and safehouse rules still apply.
+
 ## Before disabling or removing this add-on
 
 Uncouple all slave inverters first. The original mod doesn't clean up the extra
@@ -98,11 +113,14 @@ powered zones afterwards, so they could stay powered.
 
 ## Updates to Live Wire
 
-If the original Live Wire mod is updated, this add-on's copies of these files may
-need to be re-applied.
+This add-on's copies are built on Live Wire 1.7.0. If the original Live Wire mod
+is updated, this add-on's changes have to be re-applied on top of the new files.
 
 ## Version history
 
+- 1.3.0: updated for Live Wire 1.7.0 (fixes the management software error,
+  keeps Live Wire 1.7.0's fixes, works with the inverter cabinet). The inverter
+  screen opened from a far coupled inverter no longer closes at once.
 - 1.2.0: "Coupling range" sandbox option, to couple inverters farther apart
   than the cable range (up to 70 tiles).
 - 1.1.0: "Show all powered areas" for inverters; circles of removed inverters
