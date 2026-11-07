@@ -1,59 +1,41 @@
 # Live Wire: Coupled Inverter Zones (DEV)
 
-**Test build.** Mod id `batman_LiveWireCoupling_dev`. It is the released add-on
-(`batman_LiveWireCoupling` 1.2.0) updated for Live Wire 1.7.0. Enable this OR
-the released add-on, never both: they replace the same Live Wire files.
+**Test build 1.4.0.** Mod id `batman_LiveWireCoupling_dev`. It is the released
+add-on (`batman_LiveWireCoupling` 1.3.0) updated for Live Wire 1.7.2. Enable
+this OR the released add-on, never both: they replace the same Live Wire files.
 
-## New in this build: updated for Live Wire 1.7.0
+## New in this build: updated for Live Wire 1.7.2
 
-The add-on's copies of Live Wire's files were made from Live Wire 1.6.4. With
-Live Wire 1.7.0 they caused an error when opening the management software
-(`__le not defined` in `LW_Simulation.lua`), and they replaced 1.7.0's fixes in
-those files with the older code.
+Live Wire 1.7.2 moved the Electrical level from placing a device to linking it.
+That changed `LW_Devices.lua`, one of the 8 files this add-on replaces: Live
+Wire's link and couple actions now call a new function in it (`Devices.wired`),
+which add-on 1.3.0's copy (made from Live Wire 1.7.0) doesn't have. With 1.3.0,
+linking equipment, a generator or a computer, and coupling inverters, all stop
+with an error halfway: the link is made and the wire (or coupling kit) is used,
+but the rest is skipped (the message, the experience, updating what players
+see). The old copy also never marks an inverter as in service, so every link
+asks for the inverter's own level.
 
-In this build, the add-on's changes are applied on top of Live Wire 1.7.0's
-files instead. Nothing changes in how coupling, "Show all powered areas" or
-"Coupling range" work.
+In this build, the add-on's change to `LW_Devices.lua` (picking up a coupled
+inverter switches off its own zone) is applied on top of Live Wire 1.7.2's
+file. Nothing changes in how coupling, "Show all powered areas", "Coupling
+range" or the inverter screen work.
 
-- 6 of the 8 replaced files changed in 1.7.0 and are rebuilt from it:
-  `LW_Registry`, `LW_Devices`, `LW_Simulation`, `LW_Commands`, `LW_Circuits`,
-  `LW_Computer`. `LW_Demand` and `LW_ContextMenu` did not change in 1.7.0.
-- The management software, the inverter screen and load shedding no longer
-  error (1.7.0 removed the Electrical level needed for load shedding).
-- Live Wire 1.7.0's fixes now apply with the add-on too, including: a coupled
-  inverter cabinet's capacity, idle use and wear by its own model; switches no
-  longer making time run faster; the pump check when resetting a tripped
-  inverter; the circuits error when driving away from a base.
-- The new inverter cabinet (4,500 W) can be coupled like an inverter and keeps
-  its own powered zone.
-- Resetting or switching a master back on checks the whole network's demand,
-  using 1.7.0's new check (which now counts the water pumps).
-- Breaker commands for the slaves' zones use 1.7.0's faster queue, like the
-  master's.
-
-### Also fixed: the inverter screen of a far coupled inverter
-
-Clicking a coupled (slave) inverter opens its master's screen, and Live Wire
-closes that screen when you are more than 30 tiles from the master. With
-"Coupling range" a slave can be up to 70 tiles away, so its screen closed as
-soon as it opened (this was already the case in 1.2.0). Now:
-
-- The screen stays open while you are within 30 tiles of any inverter of the
-  network (the master or one of its slaves). It still closes when you walk away
-  from all of them, or with its x button.
-- In multiplayer, the server sends the screen's data to a player at any
-  inverter of the network, within the same 30 tiles.
-- The screen's I/O and Reset buttons work within 3 tiles of any inverter of the
-  network, like Live Wire's 3 tiles at the master. Safehouse rules still apply
-  to both the inverter you stand at and the master.
-
-New file `42.21/media/lua/client/LiveWireCoupling/LWC_ScreenRange.lua` (it
-wraps the screen's update, so `LW_InverterPanel.lua` is not replaced), plus
-the server side in `LW_Commands.lua` and `LW_Simulation.lua`, which the add-on
-already replaces.
+- `LW_Devices.lua` is the only replaced file that changed in Live Wire 1.7.2
+  (1.7.1 changed none of them). The other 7 are the same as in 1.3.0.
+- Live Wire 1.7.2's rules now apply with the add-on: placing needs no level.
+  Linking needs the device's level (3 for a solar panel, breaker panel or water
+  pump; 2 for a wind turbine, water wheel, power bank, battery alarm or
+  generator; 3 for a management computer). The first link to an inverter puts
+  it in service and needs level 3. After that, level 2 can add level 2
+  devices. Coupling needs level 3 and puts the master in service.
+- A device's experience is given once, at its first link, and its efficiency
+  comes from the best electrician who linked it.
+- A coupled inverter counts as in service, and so does a master that already
+  had equipment or slaves before 1.7.2. A slave freed when its master is
+  removed is not in service until something is linked to it (Live Wire's rule).
 
 ---
-
 
 An unofficial add-on for **Live Wire – Electrical Skill Overhaul** by batman-fr
 (cyberbobjr on GitHub), which is the original work:
@@ -67,6 +49,8 @@ its files with modified copies.
 In Live Wire, coupling an inverter to another one only adds capacity: the coupled
 (slave) inverter loses its own powered zone. With this add-on, a coupled inverter
 keeps its own zone, while the whole network still shares one load and one capacity.
+It works the same with Live Wire's inverter cabinet: a coupled cabinet keeps its own
+zone, and the network's capacity adds up each inverter's own rating.
 
 Replaced files, under `42.21/media/lua/`:
 
@@ -151,6 +135,14 @@ batteries...) does not change.
 - Tested on a dedicated server: couplings at 39, 63 and 69 tiles, with the
   slaves following the master on and off.
 
+## Inverter screen
+
+Clicking a coupled inverter opens its master's screen, which shows the whole
+network. The screen stays open while you are within 30 tiles of any inverter of
+the network, so it also works at a slave coupled far from its master. Its I/O and
+Reset buttons work within 3 tiles of any inverter of the network. In multiplayer
+the server checks the same distances, and safehouse rules still apply.
+
 ## Before disabling or removing this add-on
 
 Uncouple all slave inverters first. The original mod doesn't clean up the extra
@@ -158,11 +150,13 @@ powered zones afterwards, so they could stay powered.
 
 ## Updates to Live Wire
 
-This add-on's copies are built on Live Wire 1.7.0. If the original Live Wire mod
+This add-on's copies are built on Live Wire 1.7.2. If the original Live Wire mod
 is updated, this add-on's changes have to be re-applied on top of the new files.
 
 ## Version history
 
+- 1.4.0: updated for Live Wire 1.7.2 (fixes the errors when linking equipment,
+  a generator or a computer, and when coupling inverters).
 - 1.3.0: updated for Live Wire 1.7.0 (fixes the management software error,
   keeps Live Wire 1.7.0's fixes, works with the inverter cabinet). The inverter
   screen opened from a far coupled inverter no longer closes at once.

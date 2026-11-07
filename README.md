@@ -60,3 +60,18 @@ Then run them against the release (or the dev copy's `media/lua` folder):
 ```bash
 .venv/bin/python tests/run_tests.py batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/42.21/media/lua tests/zones_test.lua tests/coupling_range_test.lua tests/screen_range_test.lua
 ```
+
+`tests/link_couple_test.lua` also runs Live Wire's own files (the link and
+couple actions, `LW_Install`, `LW_Defs`) with the add-on's replacements, so it
+needs Live Wire's source at the release the add-on is built on. Check it out
+once into `.livewire` (ignored by git), at the tag of that release:
+
+```bash
+git clone --branch v1.7.2 --depth 1 https://github.com/cyberbobjr/LiveWire .livewire
+```
+
+Then pass its `media/lua` folder with `--livewire`:
+
+```bash
+.venv/bin/python tests/run_tests.py batman_LiveWireCoupling_dev/Contents/mods/batman_LiveWireCoupling_dev/42.21/media/lua --livewire .livewire/Contents/mods/batman_LiveWire/42.21/media/lua tests/zones_test.lua tests/coupling_range_test.lua tests/screen_range_test.lua tests/link_couple_test.lua
+```

@@ -8,6 +8,7 @@ desktop.ini
 
 # Test environment (tests/run_tests.py)
 .venv/
+.livewire/
 
 # Packaging output
 /dist/

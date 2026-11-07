@@ -1,6 +1,6 @@
 name=Live Wire: Coupled Inverter Zones (DEV)
 id=batman_LiveWireCoupling_dev
 require=batman_LiveWire
-description=TEST BUILD of Live Wire: Coupled Inverter Zones 1.3.0, updated for Live Wire 1.7.0 (fixes the management software error) and fixes the inverter screen of far coupled inverters closing at once. Enable this OR batman_LiveWireCoupling, never both. Patch for Live Wire by batman-fr (cyberbobjr on GitHub), Workshop ID 3821807453. Unofficial add-on, not made by batman-fr.
+description=TEST BUILD of Live Wire: Coupled Inverter Zones 1.4.0, updated for Live Wire 1.7.2 (fixes the errors when linking equipment, a generator or a computer, and when coupling inverters). Made for Live Wire 1.7.2. Enable this OR batman_LiveWireCoupling, never both. Patch for Live Wire by batman-fr (cyberbobjr on GitHub), Workshop ID 3821807453. Unofficial add-on, not made by batman-fr.
 versionMin=42.21
-modversion=1.3.0
+modversion=1.4.0

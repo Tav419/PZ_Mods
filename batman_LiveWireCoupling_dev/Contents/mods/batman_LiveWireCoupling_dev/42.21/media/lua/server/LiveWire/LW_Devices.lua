@@ -85,6 +85,19 @@ local function placementFacts(obj, dev)
     if dev.role == "storage" then dev.outside = obj:getSquare():isOutside() end
 end
 
+-- An inverter is in service once a first device was linked to it (or, in older
+-- saves, while it has equipment or slaves). Linking to an inverter that is not in
+-- service needs the inverter's own Electrical level (Install.checkLink).
+local function inService(dev)
+    if dev.role ~= "inverter" then return nil end
+    if dev.svc or dev.coupled then return true end
+    local g = dev.grid and R().grid(dev.grid)
+    if not g then return nil end
+    for _ in pairs(g.members) do return true end
+    for _ in pairs(g.slaves or {}) do return true end
+    return nil
+end
+
 local function markFromDevice(obj, dev)
     placementFacts(obj, dev)
     local st, pw = stateOf(dev)
@@ -102,7 +115,8 @@ local function markFromDevice(obj, dev)
                               muf = dev.muffled == true or nil, x = dev.x, y = dev.y, z = dev.z,
                               nb = nb, nr = nr, cpl = dev.coupled, br = dev.brake == true,
                               nm = g and g.name or nil, dirt = dev.dirt, snow = dev.snow,
-                              facing = dev.facing })
+                              facing = dev.facing, svc = inService(dev),
+                              xpd = dev.xpd == true or nil })
     dev.shownSt, dev.shownPw, dev.shownInv = st, pw, inverterOf(dev)
     if isServer() then obj:transmitModData() end
 end
@@ -135,7 +149,8 @@ function Devices.find(dev)
         if not m or m.id ~= dev.id or m.model ~= dev.model or m.cond ~= dev.cond
             or m.eff ~= dev.eff or m.level ~= dev.level or m.inv ~= inverterOf(dev)
             or m.st ~= st or m.pw ~= pw or m.x ~= dev.x or m.y ~= dev.y or m.z ~= dev.z
-            or m.facing ~= dev.facing or (m.br == true) ~= (dev.brake == true) then
+            or m.facing ~= dev.facing or (m.br == true) ~= (dev.brake == true)
+            or m.svc ~= inService(dev) then
             markFromDevice(obj, dev)
         end
     end
@@ -211,13 +226,19 @@ local function register(character, sq, spriteName, adopted)
         end
     end
 
+    -- Placing is free: efficiency, installer level and experience come with the
+    -- first link (Devices.wired). `xpd = false` marks a device whose link
+    -- experience is still due; the mark keeps `xpd = true` once given, so a moved
+    -- device does not give it again. Registry devices of older saves have no xpd
+    -- field: their experience was given at placement.
     local raw = LiveWire.Marks.raw(obj) or {}
-    local level = not adopted and character and LiveWire.Install.level(character) or 0
+    local level = 0
     local dev = R().addDevice({
         role = def.role, model = model, x = sq:getX(), y = sq:getY(), z = sq:getZ(),
         cond = tonumber(raw.cond) or 100,
-        eff = adopted and 0.85 or LiveWire.Defs.installEfficiency(level), level = level,
+        eff = LiveWire.Defs.installEfficiency(level), level = level,
         state = (def.role == "inverter") and "on" or "ok",
+        xpd = raw.xpd == true,
     })
     if def.role == "inverter" and raw.muf == true then dev.muffled = true end
     if def.kind == "wind" and raw.br == true then dev.brake = true end
@@ -241,12 +262,37 @@ local function register(character, sq, spriteName, adopted)
         if adopted then
             LiveWire.notify(character, "IGUI_LW_Adopted", { "IGUI_LW_Model_" .. model })
         else
-            LiveWire.Xp.award(character, def.xp or 0)
             LiveWire.notify(character, "IGUI_LW_Installed", { "IGUI_LW_Model_" .. model })
         end
     end
     LiveWire.log((adopted and "adopted " or "placed ") .. model .. " " .. dev.id .. " at " .. where)
     return dev
+end
+
+-- `character` linked `dev` (nil for a vanilla generator or computer) to the
+-- inverter `inv`: both keep the best installer level seen (efficiency, wear) and
+-- the inverter is in service. Returns the experience due, given once per device.
+function Devices.wired(character, dev, inv)
+    local level = LiveWire.Install.level(character)
+    local xp = 0
+    for _, d in ipairs({ dev or false, inv or false }) do
+        if d then
+            if level > (d.level or 0) then
+                d.level = level
+                d.eff = math.max(d.eff or 0, LiveWire.Defs.installEfficiency(level))
+                if d.role == "storage" then
+                    d.wearFactor = math.min(d.wearFactor or 1, LiveWire.Defs.batteryWearSkillFactor(level))
+                end
+            end
+            if d.xpd == false then
+                d.xpd = true
+                local def = LiveWire.Defs.devices[d.model]
+                xp = xp + (def and def.xp or 0)
+            end
+        end
+    end
+    if inv then inv.svc = true end
+    return xp
 end
 
 function Devices.onPlaced(character, sq, spriteName)
