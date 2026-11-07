@@ -158,6 +158,8 @@ dofile(MOD_LUA .. "/server/LiveWire/LW_Computer.lua")
 dofile(MOD_LUA .. "/shared/LiveWireCoupling/LWC_CouplingRange.lua")
 
 local R, Devices, Install, Defs = LiveWire.Registry, LiveWire.Devices, LiveWire.Install, LiveWire.Defs
+-- Experience a device gives at its first link (Live Wire's LW_Defs.lua).
+local function xpOf(model) return Defs.devices[model].xp or 0 end
 R.init()
 check(R.ready and not R.readOnly, "registry ready")
 check(type(Devices.wired) == "function",
@@ -214,7 +216,7 @@ check(res == true, "level 3 links a solar panel to a new inverter, got " .. tost
 check(p1.grid == a.grid and R.grid(a.grid).members[p1.id], "the panel is on the inverter's network")
 check(p1.level == 3 and p1.eff == Defs.installEfficiency(3), "the panel takes the linker's level and efficiency")
 check(a.svc == true and mark(A).svc == true, "the inverter is in service (registry and mark)")
-check(p1.xpd == true and a.xpd == true and mid.xp == 10 + 25,
+check(p1.xpd == true and a.xpd == true and mid.xp == xpOf("SolarPanel") + xpOf("Inverter"),
     "first link: panel + inverter experience, got " .. mid.xp)
 check(mid.items["Base.ElectricWire"] == 99, "one wire for 4 tiles")
 check(link(mid, P1, A) == false, "linking it again is refused")
@@ -222,7 +224,7 @@ check(link(mid, P1, A) == false, "linking it again is refused")
 -- Level 2 adds a level 2 device to an inverter in service...
 local W1, w1 = place(pro, "WindTurbine", 100, 106, 0)
 res = link(low, W1, A)
-check(res == true and w1.grid == a.grid and w1.level == 2 and low.xp == 20,
+check(res == true and w1.grid == a.grid and w1.level == 2 and low.xp == xpOf("WindTurbine"),
     "level 2 links a wind turbine to an inverter in service, got " .. tostring(res))
 -- ...but cannot put a new inverter in service.
 local B, b = place(pro, "Inverter", 130, 100, 0)
@@ -236,7 +238,8 @@ sandbox["LiveWire.SkillGates"] = true
 local P3, p3 = place(pro, "SolarPanel", 96, 100, 0)
 check(link(pro, P3, A) == true and p3.level == 5, "level 5 links a panel")
 local eff5 = p3.eff
-check(Devices.wired(mid, p3, a) == 0 and p3.level == 5 and p3.eff == eff5, "a level 3 re-link keeps level 5")
+check(Devices.wired ~= nil and Devices.wired(mid, p3, a) == 0 and p3.level == 5 and p3.eff == eff5,
+    "a level 3 re-link keeps level 5")
 
 ---------------------------------------------------------------- link a generator and a computer
 local GEN = object(133, 100, 0, "appliances_misc_01_0", "IsoGenerator")
@@ -249,8 +252,8 @@ check(res == true, "level 3 links a generator to a new inverter, got " .. tostri
 local gm = Install.vanillaMark(GEN)
 local gdev = gm and R.device(gm.id)
 check(gdev and gdev.role == "backup" and gdev.grid == b.grid, "the generator is the network's backup")
-check(b.svc == true and mark(B).svc == true and mid.xp - xp0 == 3 + 25,
-    "the generator link puts the inverter in service, experience 3 + 25, got " .. (mid.xp - xp0))
+check(b.svc == true and mark(B).svc == true and mid.xp - xp0 == 3 + xpOf("Inverter"),
+    "the generator link puts the inverter in service, experience 3 + the inverter's, got " .. (mid.xp - xp0))
 local GEN2 = object(97, 104, 0, "appliances_misc_01_0", "IsoGenerator")
 res = link(low, GEN2, A)
 check(res == true, "level 2 links a generator to an inverter in service, got " .. tostring(res))
@@ -280,7 +283,7 @@ check(s.coupled == m.id and s.grid == m.grid and R.grid(m.grid).slaves[s.id],
 check(R.grid(m.grid).inverter == m.id and #R.slaves(R.grid(m.grid)) == 1, "the master keeps its grid")
 check(mark(S).cpl == m.id and mark(S).svc == true and m.svc == true and mark(M).svc == true,
     "both inverters in service, marks updated")
-check(s.level == 3 and mid.xp - xp0 == 5 + 25 + 25,
+check(s.level == 3 and mid.xp - xp0 == 5 + 2 * xpOf("Inverter"),
     "coupling: 5 + both inverters' first experience, got " .. (mid.xp - xp0))
 check(mid.items["LiveWire.CouplingKit"] == 2 and wire0 - mid.items["Base.ElectricWire"] == 15,
     "one coupling kit and 15 wires used")
