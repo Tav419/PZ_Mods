@@ -113,11 +113,13 @@ powered zones afterwards, so they could stay powered.
 
 ## Updates to Live Wire
 
-This add-on's copies are built on Live Wire 1.7.0. If the original Live Wire mod
+This add-on's copies are built on Live Wire 1.7.2. If the original Live Wire mod
 is updated, this add-on's changes have to be re-applied on top of the new files.
 
 ## Version history
 
+- 1.4.0: updated for Live Wire 1.7.2 (fixes the errors when linking equipment,
+  a generator or a computer, and when coupling inverters).
 - 1.3.0: updated for Live Wire 1.7.0 (fixes the management software error,
   keeps Live Wire 1.7.0's fixes, works with the inverter cabinet). The inverter
   screen opened from a far coupled inverter no longer closes at once.
