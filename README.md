@@ -2,6 +2,16 @@
 
 Project Zomboid mods, targeting **Build 42** (the server runs 42.21.0).
 
+## What's here
+
+| Folder | What it is |
+|---|---|
+| [`batman_LiveWireCoupling/`](batman_LiveWireCoupling) | **Live Wire: Coupled Inverter Zones**, the released add-on for [Live Wire](https://github.com/cyberbobjr/LiveWire). Same files as the [Steam Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476); [its README](batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/README.md) lists every change. |
+| [`batman_LiveWireCoupling_dev/`](batman_LiveWireCoupling_dev) | Work in progress for the next version. Not for use. |
+| [`tests/`](tests), [`tools/`](tools) | Offline tests and the Live Wire update checker (see below). |
+
+To play, subscribe on the Workshop rather than downloading from here.
+
 ## Layout
 
 Each mod lives in its own top-level folder using the Steam Workshop layout, so it can be uploaded with the in-game Workshop tool:
