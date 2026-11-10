@@ -2,9 +2,10 @@
 
 ## Status (2026-11-10)
 
-- **batman-fr's release: planned for 2026-11-10 around 17:00 UTC** (Live Wire
-  and LiveWire Extended), if his last in-game checks go well. He'll ping Josh
-  right before publishing, so 2.0.0 goes out the same day.
+- **batman-fr's release: moved to 2026-11-11** (Live Wire and LiveWire
+  Extended; he said on 2026-11-10 at 16:00 UTC he had too much left to finish).
+  He'll ping Josh with the time before publishing, so 2.0.0 goes out the same
+  day. If the beta moves before then, pull it and rerun `tests/v2/`.
 - **All of Josh's questions are answered in Live Wire itself** (beta commit
   2be1162, D-57): the inverter screen stays open near any inverter of the
   network, `Coupling.inverterById` finds the master at any distance, Live Wire
