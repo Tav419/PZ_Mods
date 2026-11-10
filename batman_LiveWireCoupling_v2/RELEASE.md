@@ -33,7 +33,7 @@
   cleanup forgets the coupled inverter's buildings without taking their power
   back (`areas of removed inverter dNN forgotten`), and "Connect the building"
   / "Disconnect building" on a coupled inverter fail silently. Josh's call: if
-  it isn't fixed in batman-fr's release, add the "not compatible for now" note
+  it isn't fixed in batman-fr's release, add the "known issue" note
   below (release day, step 2).
 - The current release, 1.4.0, **breaks with the beta**: its copied files lack
   functions the new Live Wire calls (the offline tests fail). 2.0.0 has to go
@@ -95,7 +95,7 @@ expected: it means "release 2.0.0".
    - `README.md`: the 2.0 build's, with the Live Wire version filled in.
    - **If the release's Extended still has the issue above** (check
      `LWX_Inverters.lua`), replace the "With LiveWire Extended" section of the
-     README and of the Steam description with the "not compatible for now"
+     README and of the Steam description with the "known issue"
      versions below.
    - Tests: move `tests/v2/*` to `tests/`, delete the old ones and the v2 rule in
      `run_tests.py`; check `.livewire` out at the new tag; run the tests.
@@ -183,24 +183,30 @@ Live Wire is by batman-fr (cyberbobjr on GitHub), MIT license. This add-on is ma
 
 Fill in the Live Wire version, and check the GitHub link before posting.
 
-### If Extended isn't fixed: "not compatible for now" texts
+### If Extended isn't fixed: "known issue" texts
 
 Steam, in place of the "With LiveWire Extended" section:
 
 ```
-[h2]LiveWire Extended: not compatible for now[/h2]
-Please don't use this add-on with LiveWire Extended yet. With Extended, the buildings connected to a coupled inverter aren't kept reliably: Extended drops them within an in-game hour, and connecting or disconnecting a building on a coupled inverter does nothing. batman-fr knows about it, and this note will go once it's fixed. Without Extended, everything works as described.
+[h2]With LiveWire Extended: one known issue[/h2]
+Works alongside it, with one known issue: buildings connected to a coupled inverter aren't kept reliably. Extended drops them within an in-game hour (they stay powered but are no longer managed), and connecting or disconnecting a building on a coupled inverter does nothing. Connect buildings to the master instead, or uncouple first. batman-fr knows about it, and this note will go once it's fixed. Extended takes the radius away from every inverter, so "Show all powered areas" is not offered there; the coupling range and the shared load and capacity still apply.
 ```
 
 README, in place of the "With LiveWire Extended" section:
 
 ```
-## LiveWire Extended: not compatible for now
+## With LiveWire Extended: one known issue
 
-Please don't use this add-on with LiveWire Extended yet. Extended treats a
-coupled inverter as removed: within an in-game hour it drops the buildings
-connected to it (they stay powered but are no longer managed or counted), and
-"Connect the building" / "Disconnect building" on a coupled inverter do nothing.
-batman-fr knows about it; this section will change once it's fixed. Without
-Extended, everything works as described.
+LiveWire Extended (batman-fr's optional sub-mod) takes the radius away from every
+inverter: power only reaches connected buildings and terminal zones. The add-on
+works alongside it, with one known issue: Extended treats a coupled inverter as
+removed. Within an in-game hour it drops the buildings connected to a coupled
+inverter (they stay powered but are no longer managed or counted), and "Connect
+the building" / "Disconnect building" on a coupled inverter do nothing. Connect
+buildings to the master instead, or uncouple first. batman-fr knows about it;
+this section will change once it's fixed.
+
+- Coupled inverters still share one load and one capacity, and the coupling
+  range still applies.
+- "Show all powered areas" is not offered, since there are no circles to show.
 ```
