@@ -1,7 +1,9 @@
 # Live Wire: Coupled Inverter Zones
 
-An unofficial add-on for **Live Wire – Electrical Skill Overhaul** by batman-fr
-(cyberbobjr on GitHub), which is the original work:
+An official add-on for **Live Wire – Electrical Skill Overhaul** by batman-fr
+(cyberbobjr on GitHub), which is the original work. The add-on is made by
+Tav419; batman-fr made it an official Live Wire add-on in November 2026.
+Live Wire:
 https://steamcommunity.com/sharedfiles/filedetails/?id=3821807453
 
 This add-on requires Live Wire (`require=batman_LiveWire`). Since version 2.0.0
@@ -123,6 +125,7 @@ the zones come back.
 
 The coupled-zones logic that Live Wire now carries started as this add-on's
 modified copies of Live Wire files; batman-fr moved it behind the coupling
-extension point. Live Wire by batman-fr (cyberbobjr on GitHub), original repo:
+extension point. Please report problems with the add-on on its own Workshop
+page, not to batman-fr. Live Wire by batman-fr (cyberbobjr on GitHub), original repo:
 https://github.com/cyberbobjr/LiveWire, Workshop ID 3821807453, MIT license.
 The full license text is in the `LICENSE` file.

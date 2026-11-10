@@ -73,7 +73,8 @@ expected: it means "release 2.0.0".
    - Replace the Lua under `42.21/media/lua/` with the 2.0 build's (this deletes
      the 8 copies under `client/LiveWire/` and `server/LiveWire/`). Keep
      `sandbox-options.txt` and `Translate/EN/Sandbox.json`.
-   - `mod.info`: name and id of the release (`batman_LiveWireCoupling`),
+   - `mod.info`: name and id of the release (`batman_LiveWireCoupling`), the
+     description's "Official add-on for Live Wire, made by Tav419" kept,
      `modversion=2.0.0`, description with "Made for Live Wire X.Y.Z" (the new
      version; the update check reads it).
    - `README.md`: the 2.0 build's, with the Live Wire version filled in.
@@ -81,7 +82,8 @@ expected: it means "release 2.0.0".
      `run_tests.py`; check `.livewire` out at the new tag; run the tests.
    - Zip into `dist/` for Josh's PC.
 3. **Josh tests in solo** with the new Live Wire from Steam: the test list below.
-4. **Josh uploads** to Workshop item 3830945476 from his PC folder
+4. **Josh uploads** the new preview image (with the "Official add-on" ribbon,
+   approved by batman-fr 2026-11-10) and the mod to Workshop item 3830945476 from his PC folder
    (`C:\Users\jdshr\Zomboid\Workshop\LiveWireCoupling\`), keeping his
    `workshop.txt` (its `id=` line keeps it the same item) and Public visibility.
    Update the Steam description (draft below).
@@ -100,7 +102,7 @@ expected: it means "release 2.0.0".
 ### Discord post (draft)
 
 ```
-Live Wire: Coupled Inverter Zones 2.0 is up for the new Live Wire X.Y.Z. If you use it and see errors after the Live Wire update, make sure Steam has updated the add-on to 2.0 (restart the game or server after it updates). Same features and settings, and existing saves keep their coupled areas. https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476
+Live Wire: Coupled Inverter Zones 2.0, now an official Live Wire add-on, is up for the new Live Wire X.Y.Z. If you use it and see errors after the Live Wire update, make sure Steam has updated the add-on to 2.0 (restart the game or server after it updates). Same features and settings, and existing saves keep their coupled areas. https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476
 ```
 
 ### In-game test list
@@ -130,7 +132,7 @@ Live Wire: Coupled Inverter Zones 2.0 is up for the new Live Wire X.Y.Z. If you 
 ```
 [h1]Live Wire: Coupled Inverter Zones[/h1]
 
-An unofficial add-on for [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3821807453]Live Wire – Electrical Skill Overhaul[/url] by batman-fr. Requires Live Wire X.Y.Z or newer.
+An [b]official add-on[/b] for [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3821807453]Live Wire – Electrical Skill Overhaul[/url] by batman-fr. Requires Live Wire X.Y.Z or newer.
 
 In Live Wire, coupling an inverter to another one only adds capacity: the coupled inverter loses its own powered area. With this add-on, every coupled inverter keeps its own powered area, while the whole network shares one load and one capacity. Works with the inverter cabinet too.
 
@@ -152,7 +154,7 @@ Add [b]batman_LiveWireCoupling[/b] to Mods= after batman_LiveWire. Set the Coupl
 Nothing to do first: Live Wire switches off the coupled inverters' extra powered areas when a save loads without the add-on.
 
 [h2]Credits[/h2]
-Live Wire is by batman-fr (cyberbobjr on GitHub), MIT license. This add-on is unofficial: please report issues here, not to batman-fr. Source: https://github.com/Tav419/PZ_Mods
+Live Wire is by batman-fr (cyberbobjr on GitHub), MIT license. This add-on is made by Tav419 and is an official Live Wire add-on, with batman-fr's blessing. Thanks to batman-fr for building the coupling extension point that 2.0 runs on. Please report add-on issues here, not to batman-fr. Source: https://github.com/Tav419/PZ_Mods
 ```
 
 Fill in the Live Wire version, and check the GitHub link before posting.
