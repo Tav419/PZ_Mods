@@ -140,7 +140,8 @@ LiveWire.Config = {
     verticalRange = function() return 3 end,
     get = function(k) return ({ LinkRange = 30, LinkVerticalRange = 3, WirePerTiles = 4 })[k] end,
 }
-LiveWire.Coverage = { hasDisc = function() return true end, extraPositions = function() return {} end }
+local disc = true   -- false: a coverage provider replaces the disc (LiveWire Extended)
+LiveWire.Coverage = { hasDisc = function() return disc end, extraPositions = function() return {} end }
 LiveWire.PumpView = { hide = function() end, isShown = function() return false end }
 LiveWire.Marks = { get = function(o) return o and o.mark end }
 LiveWire.Anchor = { table = function() return anchors end }
@@ -385,6 +386,19 @@ RV.show("P", 102, 102, 0, { radius = 10 })   -- near the player: Live Wire hides
 runTicks(ZV.CHECK_TICKS or 30)
 check(RV.inverterId == "P", "a pump's circle is not touched")
 RV.hide()
+
+---------------------------------------------------------------- LiveWire Extended: no radius
+-- Extended's coverage provider replaces the disc: no circles to show, so no option.
+ZV.hide()
+disc = false
+local xm = openMenu(M)
+check(xm ~= nil and find(xm, "Show all powered areas") == nil and find(xm, "Hide all powered areas") == nil,
+    "no radius (Extended): 'Show all powered areas' is not offered")
+check(find(openMenu(S1), "Show all powered areas") == nil, "no radius: not offered on a coupled inverter either")
+ZV.toggle(player, M)
+check(ZV.networkId == nil and ZV.element == nil, "no radius: toggling shows nothing")
+disc = true
+check(find(openMenu(M), "Show all powered areas") ~= nil, "with a radius again: offered")
 
 ---------------------------------------------------------------- coupling range
 local F = inverter("F", 145, 100, 0)          -- 36 tiles from X: past the cable range

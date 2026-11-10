@@ -106,6 +106,17 @@ function Overlay:render()
     end
 end
 
+-- Do inverters have a radius? Not under LiveWire Extended, whose coverage provider
+-- replaces the disc (Live Wire's D-44): power then only reaches connected buildings
+-- and terminal zones, so circles would show areas that aren't powered. Live Wire's
+-- own "Show range" draws no circle then either. The API has no getter for this, so it
+-- reads LiveWire.Coverage.hasDisc, and assumes a radius when that is missing.
+function ZV.hasDisc()
+    local C = LiveWire.Coverage
+    if C and type(C.hasDisc) == "function" then return C.hasDisc() ~= false end
+    return true
+end
+
 -- Network id of an inverter: its master's id when coupled, else its own.
 function ZV.networkOf(mark)
     return mark.cpl or mark.id
@@ -223,6 +234,10 @@ Events.OnTick.Add(onTick)
 function ZV.toggle(player, obj)
     local mark = API.mark(obj)
     if not mark or not obj:getSquare() then return end
+    if not ZV.hasDisc() then
+        ZV.hide()
+        return
+    end
     if ZV.isShown(ZV.networkOf(mark)) then
         ZV.hide()
         return
@@ -235,9 +250,9 @@ end
 
 -- Adds "Show all powered areas" (or "Hide ...") to an inverter's Live Wire menu,
 -- master or coupled. Add-on text, with an English fallback (the add-on ships no
--- menu translation files).
+-- menu translation files). Not offered when inverters have no radius (ZV.hasDisc).
 function ZV.addMenu(menu, player, obj, mark, isSlave)
-    if not mark then return end
+    if not mark or not ZV.hasDisc() then return end
     local key, text = "ContextMenu_LWC_ShowAllZones", "Show all powered areas"
     if ZV.isShown(ZV.networkOf(mark)) then
         key, text = "ContextMenu_LWC_HideAllZones", "Hide all powered areas"

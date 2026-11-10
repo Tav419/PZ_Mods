@@ -13,8 +13,10 @@
 - **Moved onto the API (2026-11-10).** `LWC_ScreenRange.lua` is gone (Live Wire
   does it), the `Menu.onShowRange` wrapper is replaced by `API.onRangeView`, and
   anchors, marks, distances and the range view go through `LiveWire.API`. Only
-  `LiveWire.Config` (cable range, powered-area radius and floors) is still read
-  directly: the API has no getter for those. The add-on refuses to register,
+  `LiveWire.Config` (cable range, powered-area radius and floors) and
+  `LiveWire.Coverage.hasDisc` (whether LiveWire Extended took the radius away,
+  to hide "Show all powered areas") are still read directly: the API has no
+  getter for those. The add-on refuses to register,
   with a console line, on an API older than revision 3.
 - **Built and tested offline.** `tests/v2/` passes against Live Wire's beta
   branch (commit 2be1162): 168 checks, including Live Wire's own linking,
@@ -125,6 +127,8 @@ Live Wire: Coupled Inverter Zones 2.0, now an official Live Wire add-on, is up f
 - On a copy of a solo save: disable the add-on and load: the coupled
   inverters' own areas are off (console: `dropped the zone of N coupled
   inverter(s)`). Enable it again: the areas come back.
+- With LiveWire Extended enabled too: no errors, coupling still works, and
+  "Show all powered areas" is not in the inverter menu.
 - Multiplayer: the same on the server with a second player.
 
 ## Steam Workshop description (draft for 2.0.0)
@@ -146,6 +150,9 @@ In Live Wire, coupling an inverter to another one only adds capacity: the couple
 
 [h2]New in 2.0.0[/h2]
 The add-on no longer replaces any Live Wire file. It plugs into the coupling extension point batman-fr added to Live Wire, so Live Wire updates no longer break it. Same features, same settings, existing saves keep their coupled areas.
+
+[h2]With LiveWire Extended[/h2]
+Works alongside it. Extended takes the radius away from every inverter (power only reaches connected buildings and terminal zones), so coupled inverters keeping their own area changes nothing there, and "Show all powered areas" is not offered. The coupling range and the shared load and capacity still apply.
 
 [h2]Server setup[/h2]
 Add [b]batman_LiveWireCoupling[/b] to Mods= after batman_LiveWire. Set the Coupling range on the sandbox page "Live Wire: Coupled Inverter Zones".

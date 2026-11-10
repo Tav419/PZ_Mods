@@ -93,8 +93,16 @@ the server checks the same distances, and safehouse rules still apply.
 ## With LiveWire Extended
 
 LiveWire Extended (batman-fr's optional sub-mod) takes the radius away from every
-inverter: power only reaches connected buildings and terminal zones. A coupled
-inverter keeping its zone then changes nothing; the coupling range still applies.
+inverter: power only reaches connected buildings and terminal zones. The add-on
+loads and works alongside it, but:
+
+- A coupled inverter keeping its zone changes nothing, since there is no radius.
+  Coupled inverters still share one load and one capacity, and the coupling
+  range still applies.
+- "Show all powered areas" is not offered, since there are no circles to show
+  (Live Wire's own "Show range" draws none either).
+- Extended doesn't connect buildings to a coupled inverter. That is Extended's
+  own rule, with or without this add-on.
 
 ## Disabling or removing this add-on
 
