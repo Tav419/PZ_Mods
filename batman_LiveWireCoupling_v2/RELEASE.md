@@ -20,7 +20,7 @@
   getter for those. The add-on refuses to register,
   with a console line, on an API older than revision 3.
 - **Built and tested offline.** `tests/v2/` passes against Live Wire's beta
-  branch (commit 2be1162): 168 checks, including Live Wire's own linking,
+  branch (commit 2be1162): 172 checks, including Live Wire's own linking,
   coupling, menu, API and range view code with the add-on registered.
 - **Tested in game on the beta (2026-11-10, Josh, solo).** Without Extended,
   everything passed: registration, coupling about 60 tiles apart with range 70,
@@ -106,7 +106,10 @@ expected: it means "release 2.0.0".
    (`C:\Users\jdshr\Zomboid\Workshop\LiveWireCoupling\`), keeping his
    `workshop.txt` (its `id=` line keeps it the same item) and Public visibility.
    Update the Steam description (draft below).
-5. **Server** (rules in `~/pzserver/CLAUDE.md`): check who's online, back up
+5. **Server** (rules in `~/pzserver/CLAUDE.md`), soon after the upload: once
+   Live Wire's update is on Steam, players' games download it while the held
+   server still runs the old one, so they may not be able to join until the
+   server is updated. Check who's online, back up
    the save and config, allow the held Live Wire with
    `echo <version> > ~/.pzserver-livewire-allow` (Josh's OK), restart, and
    check that the server downloaded 2.0.0 and it matches the repo. The console
