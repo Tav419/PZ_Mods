@@ -102,8 +102,6 @@ works alongside it:
   load and one capacity, and the coupling range still applies.
 - "Show all powered areas" is not offered, since there are no circles to show
   (Live Wire's own "Show range" draws none either).
-- Extended doesn't connect buildings to a coupled inverter. That is Extended's
-  own rule, with or without this add-on.
 
 ## Disabling or removing this add-on
 
