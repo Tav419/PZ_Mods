@@ -27,7 +27,18 @@ changed replaced file into the dev copy (git merge-file, base and new tags),
 checks out .livewire at the new tag and runs the tests on the dev copy. Version
 numbers, mod.info, README and zips are left to do by hand.
 
-Exit status: 0 nothing to do, 1 the add-on needs work, 2 error.
+Coupling extension point (LiveWire.Coupling, LW_Coupling.lua, from batman-fr's
+beta in November 2026): add-on 2.0 (batman_LiveWireCoupling_v2 until it is
+released) replaces no Live Wire files and registers with it instead.
+- A release that still replaces files, checked against a Live Wire that has the
+  extension point: the report says the 2.0 build must replace it, and runs the
+  2.0 build's tests with the new Live Wire. --merge then merges nothing and
+  exits 2 with that reason (an old-style merge would undo the switch).
+- A 2.0 add-on (it has LWC_Register.lua): the report checks that the new Live
+  Wire still has the extension point, at the version the add-on is written for.
+
+Exit status: 0 nothing to do, 1 the add-on needs work, 2 error (or --merge
+refused because the 2.0 build replaces the release).
 """
 import argparse
 import io
@@ -44,6 +55,10 @@ LW_URL = "https://github.com/cyberbobjr/LiveWire"
 LW_MOD = "Contents/mods/batman_LiveWire"
 REL_MOD = ROOT / "batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling"
 DEV_MOD = ROOT / "batman_LiveWireCoupling_dev/Contents/mods/batman_LiveWireCoupling_dev"
+V2_MOD = ROOT / "batman_LiveWireCoupling_v2/Contents/mods/batman_LiveWireCoupling_v2"
+COUPLING = "shared/LiveWire/LW_Coupling.lua"          # Live Wire's coupling extension point
+REGISTER = "shared/LiveWireCoupling/LWC_Register.lua"  # the 2.0 add-on's registration
+COUPLING_VERSION = 1                                    # the version add-on 2.0 is written for
 PYTHON = ROOT / ".venv/bin/python"
 SERVER_LW = pathlib.Path.home() / "pzserver/steamapps/workshop/content/108600/3821807453/mods/batman_LiveWire"
 
@@ -158,13 +173,19 @@ def missing_refs(ours, lw_files, replaced):
 
 
 def run_tests(addon, lw_lua):
-    tests = sorted(str(p) for p in (ROOT / "tests").glob("*_test.lua"))
     py = str(PYTHON) if PYTHON.exists() else sys.executable
-    r = subprocess.run([py, str(ROOT / "tests/run_tests.py"), str(addon), "--livewire", str(lw_lua), *tests],
+    # run_tests.py picks the tests for the add-on's version (tests/ or tests/v2/).
+    r = subprocess.run([py, str(ROOT / "tests/run_tests.py"), str(addon), "--livewire", str(lw_lua)],
                        capture_output=True, text=True)
     lines = [l for l in (r.stdout + r.stderr).splitlines() if not l.startswith("syntax ok")]
     print("\n".join("    " + l for l in lines[-40:]))
     return r.returncode == 0
+
+
+def coupling_version(text):
+    """Version of Live Wire's coupling extension point (`local Coupling = { version = 1 }`)."""
+    m = re.search(r"\bCoupling\s*=\s*\{\s*version\s*=\s*(\d+)", text or "")
+    return int(m.group(1)) if m else None
 
 
 def extract(tag, dest):
@@ -235,6 +256,32 @@ def main():
     own = sorted(p for p in ours if p not in replaced)
     needs_work = False
 
+    # The coupling extension point (add-on 2.0).
+    api = coupling_version(new_lw.get(COUPLING)) if COUPLING in new_lw else None
+    switch_to_v2 = False
+    print("\nCoupling extension point (LiveWire.Coupling):")
+    if REGISTER in ours:
+        if COUPLING not in new_lw:
+            print(f"  ! Live Wire {new} has no {COUPLING}: add-on 2.0 cannot register")
+            needs_work = True
+        elif api != COUPLING_VERSION:
+            print(f"  ! Live Wire {new} has version {api}, the add-on is written for {COUPLING_VERSION}:"
+                  " check LWC_Register.lua against the new LW_Coupling.lua")
+            needs_work = True
+        else:
+            changed_api = COUPLING in base_lw and base_lw[COUPLING] != new_lw[COUPLING]
+            print(f"  version {api}, as the add-on expects" + (" (LW_Coupling.lua changed: check it)" if changed_api else ""))
+    elif COUPLING in new_lw:
+        switch_to_v2 = bool(replaced)
+        print(f"  ! Live Wire {new} has it (version {api}). This add-on still replaces {len(replaced)} Live Wire"
+              " file(s), which would overwrite Live Wire's new code.")
+        print(f"    Release add-on 2.0 instead: {V2_MOD.relative_to(ROOT)} (see batman_LiveWireCoupling_v2/RELEASE.md).")
+        if api != COUPLING_VERSION:
+            print(f"  ! version {api}, the 2.0 build is written for {COUPLING_VERSION}: check LWC_Register.lua")
+        needs_work = True
+    else:
+        print(f"  not in Live Wire {new}")
+
     print(f"\nReplaced Live Wire files ({len(replaced)}):")
     changed = []
     for p in replaced:
@@ -286,6 +333,16 @@ def main():
         print("  PASS" if ok else "  FAIL: the add-on breaks with this Live Wire")
         needs_work = needs_work or not ok
 
+    if switch_to_v2 and V2_MOD.is_dir() and not args.no_tests:
+        print(f"\nOffline tests: the 2.0 build ({V2_MOD.name}) with Live Wire {new}:")
+        with tempfile.TemporaryDirectory() as td:
+            v2ok = run_tests(addon_lua(V2_MOD), extract(new, td))
+        print("  PASS: ready to test in game and release" if v2ok else "  FAIL: the 2.0 build needs work first")
+
+    if args.merge and switch_to_v2:
+        die(f"Live Wire {new} has the coupling extension point: not merging into the dev copy; "
+            f"release the 2.0 build ({V2_MOD.name}) instead, needs a session")
+
     if args.merge:
         dev_lua = addon_lua(DEV_MOD)
         dev = addon_tree(dev_lua)
@@ -319,6 +376,10 @@ def main():
         print("\nLeft to do by hand: the add-on's own changes to the merged files still make sense,"
               f" dev mod.info (modversion, description), dev README, a zip in dist/.")
 
+    if switch_to_v2:
+        print(f"\nResult: Live Wire {new} has the coupling extension point: release add-on 2.0"
+              f" ({V2_MOD.name}) in place of this one.")
+        return 1
     print("\nResult: " + ("the add-on needs an update for Live Wire " + new if needs_work
                           else f"Live Wire {new} changes nothing the add-on depends on."))
     if needs_work and not args.merge and not args.addon:

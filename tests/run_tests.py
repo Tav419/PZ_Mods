@@ -10,10 +10,12 @@ Each test file runs in a fresh Lua state. Example, from the repo root:
         batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/42.21/media/lua
 Use the dev copy's media/lua folder to test a dev build.
 
-With no test files given, every tests/*_test.lua runs. --livewire points at Live
-Wire's own media/lua folder; by default the checkout in .livewire (see the
-README). Tests that run Live Wire's own files with the add-on
-(link_couple_test.lua) read it as the global LIVEWIRE_LUA.
+With no test files given, every tests/*_test.lua runs, or every tests/v2/*_test.lua
+for a 2.0 build (a mod with shared/LiveWireCoupling/LWC_Register.lua). --livewire
+points at Live Wire's own media/lua folder; by default the checkout in .livewire
+(see the README), or .livewire-beta for a 2.0 build while Live Wire's coupling
+extension point is only on its beta branch. Tests that run Live Wire's own files
+with the add-on read it as the global LIVEWIRE_LUA.
 """
 import pathlib
 import re
@@ -33,9 +35,11 @@ if "--livewire" in args:
 if not args:
     sys.exit(__doc__)
 mod_lua = pathlib.Path(args[0])
-tests = [pathlib.Path(p) for p in args[1:]] or sorted(HERE.glob("*_test.lua"))
+v2 = (mod_lua / "shared/LiveWireCoupling/LWC_Register.lua").exists()
+tests = [pathlib.Path(p) for p in args[1:]] or sorted((HERE / "v2" if v2 else HERE).glob("*_test.lua"))
 if livewire is None:
-    lw_mod = ROOT / ".livewire/Contents/mods/batman_LiveWire"
+    clone = ".livewire-beta" if v2 and (ROOT / ".livewire-beta").is_dir() else ".livewire"
+    lw_mod = ROOT / clone / "Contents/mods/batman_LiveWire"
     games = sorted((p for p in lw_mod.glob("*") if re.match(r"^\d+\.\d+$", p.name)),
                    key=lambda p: tuple(int(x) for x in p.name.split(".")))
     if games:

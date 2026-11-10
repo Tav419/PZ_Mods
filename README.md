@@ -8,6 +8,7 @@ Project Zomboid mods, targeting **Build 42** (the server runs 42.21.0).
 |---|---|
 | [`batman_LiveWireCoupling/`](batman_LiveWireCoupling) | **Live Wire: Coupled Inverter Zones**, the released add-on for [Live Wire](https://github.com/cyberbobjr/LiveWire). Same files as the [Steam Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476); [its README](batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/README.md) lists every change. |
 | [`batman_LiveWireCoupling_dev/`](batman_LiveWireCoupling_dev) | Work in progress for the next version. Not for use. |
+| [`batman_LiveWireCoupling_v2/`](batman_LiveWireCoupling_v2) | Version 2.0, waiting for the next Live Wire release: it plugs into Live Wire's new coupling extension point instead of replacing Live Wire files. Not for use yet; [its release checklist](batman_LiveWireCoupling_v2/RELEASE.md). |
 | [`tests/`](tests), [`tools/`](tools) | Offline tests and the Live Wire update checker (see below). |
 
 To play, subscribe on the Workshop rather than downloading from here.
@@ -75,6 +76,20 @@ git clone https://github.com/cyberbobjr/LiveWire .livewire && git -C .livewire c
 source with every release tag, checked out at the version being tested (the one
 in the add-on's mod.info, "Made for Live Wire X.Y.Z").
 
+For the 2.0 build, also clone Live Wire's beta branch, which has the coupling
+extension point (until it is in a Live Wire release):
+
+```bash
+git clone --branch beta https://github.com/cyberbobjr/LiveWire .livewire-beta
+```
+
+`tests/v2/` holds the 2.0 build's tests. The runner picks them, and
+`.livewire-beta`, by itself for a 2.0 build (a mod with `LWC_Register.lua`):
+
+```bash
+git -C .livewire-beta pull && .venv/bin/python tests/run_tests.py batman_LiveWireCoupling_v2/Contents/mods/batman_LiveWireCoupling_v2/42.21/media/lua
+```
+
 Then run every test against the release, or the dev copy's `media/lua` folder:
 
 ```bash
@@ -104,3 +119,10 @@ If the add-on needs an update, start the dev build with `--merge`. It 3-way
 merges the changed files into the dev copy, moves `.livewire` to the new tag
 and runs the tests. The dev copy's Lua must match the release first. Version
 numbers, mod.info, the README and the zip are then done by hand.
+
+Once a Live Wire release has the coupling extension point (`LW_Coupling.lua`),
+the check says so, runs the 2.0 build's tests with it, and `--merge` refuses to
+merge (exit 2): the release is replaced by the 2.0 build instead, see
+[its checklist](batman_LiveWireCoupling_v2/RELEASE.md). For a 2.0 release the
+check makes sure Live Wire still has the extension point at the version the
+add-on is written for.
