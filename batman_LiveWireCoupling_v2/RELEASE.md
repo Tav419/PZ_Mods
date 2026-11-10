@@ -22,7 +22,19 @@
 - **Built and tested offline.** `tests/v2/` passes against Live Wire's beta
   branch (commit 2be1162): 168 checks, including Live Wire's own linking,
   coupling, menu, API and range view code with the add-on registered.
-- **Not tested in game.** The new Live Wire isn't on Steam yet.
+- **Tested in game on the beta (2026-11-10, Josh, solo).** Without Extended,
+  everything passed: registration, coupling about 60 tiles apart with range 70,
+  the coupled inverter's own area, "Show all powered areas" and "Show range"
+  replacing each other, the master's screen staying open at the far inverter,
+  I/O from there, and picking up the coupled inverter.
+- **LiveWire Extended issue (Extended's, not ours; sent to batman-fr
+  2026-11-10):** Extended treats a coupled inverter as removed
+  (`LWX_Inverters.get/ofObject` return nil when `dev.coupled`). Its hourly
+  cleanup forgets the coupled inverter's buildings without taking their power
+  back (`areas of removed inverter dNN forgotten`), and "Connect the building"
+  / "Disconnect building" on a coupled inverter fail silently. Josh's call: if
+  it isn't fixed in batman-fr's release, add the "not compatible for now" note
+  below (release day, step 2).
 - The current release, 1.4.0, **breaks with the beta**: its copied files lack
   functions the new Live Wire calls (the offline tests fail). 2.0.0 has to go
   out the same day as the Live Wire release.
@@ -81,6 +93,10 @@ expected: it means "release 2.0.0".
      `modversion=2.0.0`, description with "Made for Live Wire X.Y.Z" (the new
      version; the update check reads it).
    - `README.md`: the 2.0 build's, with the Live Wire version filled in.
+   - **If the release's Extended still has the issue above** (check
+     `LWX_Inverters.lua`), replace the "With LiveWire Extended" section of the
+     README and of the Steam description with the "not compatible for now"
+     versions below.
    - Tests: move `tests/v2/*` to `tests/`, delete the old ones and the v2 rule in
      `run_tests.py`; check `.livewire` out at the new tag; run the tests.
    - Zip into `dist/` for Josh's PC.
@@ -166,3 +182,25 @@ Live Wire is by batman-fr (cyberbobjr on GitHub), MIT license. This add-on is ma
 ```
 
 Fill in the Live Wire version, and check the GitHub link before posting.
+
+### If Extended isn't fixed: "not compatible for now" texts
+
+Steam, in place of the "With LiveWire Extended" section:
+
+```
+[h2]LiveWire Extended: not compatible for now[/h2]
+Please don't use this add-on with LiveWire Extended yet. With Extended, the buildings connected to a coupled inverter aren't kept reliably: Extended drops them within an in-game hour, and connecting or disconnecting a building on a coupled inverter does nothing. batman-fr knows about it, and this note will go once it's fixed. Without Extended, everything works as described.
+```
+
+README, in place of the "With LiveWire Extended" section:
+
+```
+## LiveWire Extended: not compatible for now
+
+Please don't use this add-on with LiveWire Extended yet. Extended treats a
+coupled inverter as removed: within an in-game hour it drops the buildings
+connected to it (they stay powered but are no longer managed or counted), and
+"Connect the building" / "Disconnect building" on a coupled inverter do nothing.
+batman-fr knows about it; this section will change once it's fixed. Without
+Extended, everything works as described.
+```
