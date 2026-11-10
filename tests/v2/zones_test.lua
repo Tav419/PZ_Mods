@@ -18,7 +18,12 @@ end
 function isServer() return false end
 local ticks, fillWorld = {}, nil
 Events = {
-    OnTick = { Add = function(f) ticks[#ticks + 1] = f end },
+    OnTick = {
+        Add = function(f) ticks[#ticks + 1] = f end,
+        Remove = function(f)
+            for i = #ticks, 1, -1 do if ticks[i] == f then table.remove(ticks, i) end end
+        end,
+    },
     OnFillWorldObjectContextMenu = { Add = function(f) fillWorld = f end },
     OnFillInventoryObjectContextMenu = { Add = function() end },
     OnInitGlobalModData = { Add = function() end },
@@ -30,6 +35,8 @@ function require(name)
         ["LiveWireCoupling/LWC_CouplingRange"] = MOD_LUA .. "/shared/LiveWireCoupling/LWC_CouplingRange.lua",
         ["LiveWire/LW_Extension"] = LIVEWIRE_LUA .. "/shared/LiveWire/LW_Extension.lua",
         ["LiveWire/LW_Coupling"] = LIVEWIRE_LUA .. "/shared/LiveWire/LW_Coupling.lua",
+        ["LiveWire/LW_API"] = LIVEWIRE_LUA .. "/shared/LiveWire/LW_API.lua",
+        ["LiveWire/LW_RangeView"] = LIVEWIRE_LUA .. "/client/LiveWire/LW_RangeView.lua",
     }
     if files[name] and not loaded[name] then
         loaded[name] = true
@@ -133,12 +140,7 @@ LiveWire.Config = {
     verticalRange = function() return 3 end,
     get = function(k) return ({ LinkRange = 30, LinkVerticalRange = 3, WirePerTiles = 4 })[k] end,
 }
--- Same public fields as LW_RangeView.lua.
-local RV = { COLOR = { r = 0.25, g = 0.9, b = 1.0, a = 0.9 } }
-LiveWire.RangeView = RV
-function RV.isShown(id) return RV.inverterId ~= nil and RV.inverterId == id end
-function RV.hide() RV.inverterId, RV.center, RV.opts = nil, nil, nil end
-function RV.show(id, x, y, z, opts) RV.inverterId, RV.center, RV.opts = id, { x = x, y = y, z = z }, opts end
+LiveWire.Coverage = { hasDisc = function() return true end, extraPositions = function() return {} end }
 LiveWire.PumpView = { hide = function() end, isShown = function() return false end }
 LiveWire.Marks = { get = function(o) return o and o.mark end }
 LiveWire.Anchor = { table = function() return anchors end }
@@ -212,23 +214,26 @@ local function click(opt) opt.fn(opt.target, opt.args[1], opt.args[2], opt.args[
 -- the add-on's).
 require("LiveWire/LW_Extension")
 require("LiveWire/LW_Coupling")
+require("LiveWire/LW_API")
 dofile(MOD_LUA .. "/shared/LiveWireCoupling/LWC_Register.lua")
 check(LiveWire.CouplingAddon.ok == true, "the add-on registered: " .. tostring(LiveWire.CouplingAddon.why))
 check(LiveWire.Coupling.slaveKeepsZone() == true, "coupled inverters keep their zone")
+require("LiveWire/LW_RangeView")
+local RV = LiveWire.RangeView
 dofile(LIVEWIRE_LUA .. "/client/LiveWire/LW_ContextMenu.lua")
 local baseShowRange = LiveWire.Menu.onShowRange
 require("LiveWireCoupling/LWC_ZonesView")
 local ZV = LiveWire.ZonesView
 check(ZV ~= nil and ZV.addMenu ~= nil, "LWC_ZonesView loaded")
 check(fillWorld ~= nil, "menu registered its world context menu handler")
-check(LiveWire.Menu.onShowRange ~= baseShowRange and ZV.baseOnShowRange == baseShowRange,
-    "Show range wrapped, Live Wire's kept")
-local wrappedShowRange = LiveWire.Menu.onShowRange
+check(LiveWire.Menu.onShowRange == baseShowRange, "Live Wire's Show range is not wrapped")
+check(#LiveWire.API.rangeViewListeners() == 1, "one range view listener registered")
+local ticksBefore = #ticks
 loaded["LiveWireCoupling/LWC_ZonesView"] = nil
 require("LiveWireCoupling/LWC_ZonesView")
-check(ZV.baseOnShowRange == baseShowRange, "reloading keeps Live Wire's Show range as the base")
-LiveWire.Menu.onShowRange = wrappedShowRange
+check(#LiveWire.API.rangeViewListeners() == 1, "reloading keeps one range view listener")
 ticks[#ticks] = nil   -- the reload added its OnTick handler again
+check(#ticks == ticksBefore, "tick handlers back to the first load's")
 
 ---------------------------------------------------------------- collect()
 local function ids(centers)
@@ -376,7 +381,7 @@ runTicks(ZV.CHECK_TICKS or 30)
 check(RV.inverterId == nil, "Show range hides after its inverter is picked up")
 putBack(X)
 -- A pump's circle (RangeView with options) is left to LW_PumpView.
-RV.show("P", 300, 300, 0, { radius = 10 })
+RV.show("P", 102, 102, 0, { radius = 10 })   -- near the player: Live Wire hides far views
 runTicks(ZV.CHECK_TICKS or 30)
 check(RV.inverterId == "P", "a pump's circle is not touched")
 RV.hide()
@@ -426,11 +431,12 @@ check(net == "F" and ids(c) == "145,100,0 185,100,0", "far slave collects its ma
 net, c = ZV.collect(F)
 check(net == "F" and ids(c) == "145,100,0 185,100,0", "master collects its far slave, got " .. ids(c))
 check(LiveWire.Config.get("LinkRange") == 30, "the cable range is unchanged after the menus")
--- Lowered after coupling: G is 40 tiles from F, past a 30-tile range. Live Wire's
--- menu only looks within the coupling range (asked batman-fr about it).
+-- Lowered after coupling: G is 40 tiles from F, past a 30-tile range. Live Wire finds
+-- the master through its anchor at any distance (API revision 3).
 couplingRange = 30
 gm = openMenu(G)
-check(find(gm, "ContextMenu_LW_CoupledFar") ~= nil, "range lowered to 30: the slave's menu says its master is far")
+check(find(gm, "ContextMenu_LW_CoupledTo") ~= nil and texts["ContextMenu_LW_CoupledTo"][1] == "40",
+    "range lowered to 30: the slave's menu still shows its master 40 tiles away")
 check(find(gm, "ContextMenu_LW_ShowRange") ~= nil and find(gm, "Show all powered areas") ~= nil,
     "the far slave still has Show range and Show all powered areas")
 couplingRange = 0

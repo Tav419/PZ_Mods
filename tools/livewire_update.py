@@ -36,6 +36,9 @@ released) replaces no Live Wire files and registers with it instead.
   exits 2 with that reason (an old-style merge would undo the switch).
 - A 2.0 add-on (it has LWC_Register.lua): the report checks that the new Live
   Wire still has the extension point, at the version the add-on is written for.
+- Either way, it checks that Live Wire's public API (LiveWire.API, LW_API.lua) is
+  version 1 at revision 3 or newer: the 2.0 build reads Live Wire through it
+  (anchors, marks, the range view services).
 
 Exit status: 0 nothing to do, 1 the add-on needs work, 2 error (or --merge
 refused because the 2.0 build replaces the release).
@@ -59,6 +62,8 @@ V2_MOD = ROOT / "batman_LiveWireCoupling_v2/Contents/mods/batman_LiveWireCouplin
 COUPLING = "shared/LiveWire/LW_Coupling.lua"          # Live Wire's coupling extension point
 REGISTER = "shared/LiveWireCoupling/LWC_Register.lua"  # the 2.0 add-on's registration
 COUPLING_VERSION = 1                                    # the version add-on 2.0 is written for
+API_FILE = "shared/LiveWire/LW_API.lua"                # Live Wire's public API
+API_REVISION = 3                                        # the oldest revision add-on 2.0 works with
 PYTHON = ROOT / ".venv/bin/python"
 SERVER_LW = pathlib.Path.home() / "pzserver/steamapps/workshop/content/108600/3821807453/mods/batman_LiveWire"
 
@@ -188,6 +193,26 @@ def coupling_version(text):
     return int(m.group(1)) if m else None
 
 
+def api_revision(text):
+    """(version, revision) of Live Wire's public API (`local API = { version = 1, revision = 3 }`)."""
+    m = re.search(r"\bAPI\s*=\s*\{\s*version\s*=\s*(\d+)\s*,\s*revision\s*=\s*(\d+)", text or "")
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def check_api(lw, tag):
+    """Print whether Live Wire `tag`'s public API is new enough for add-on 2.0; True when it is."""
+    rev = api_revision(lw.get(API_FILE))
+    if rev is None:
+        print(f"  ! Live Wire {tag} has no readable LiveWire.API version in {API_FILE}")
+        return False
+    if rev[0] != 1 or rev[1] < API_REVISION:
+        print(f"  ! LiveWire.API is version {rev[0]} revision {rev[1]}; add-on 2.0 needs version 1,"
+              f" revision {API_REVISION} or newer")
+        return False
+    print(f"  LiveWire.API version {rev[0]} revision {rev[1]} (add-on 2.0 needs revision {API_REVISION}+)")
+    return True
+
+
 def extract(tag, dest):
     data = git("archive", "--format=tar", tag, LW_MOD, binary=True)
     with tarfile.open(fileobj=io.BytesIO(data)) as tar:
@@ -271,6 +296,8 @@ def main():
         else:
             changed_api = COUPLING in base_lw and base_lw[COUPLING] != new_lw[COUPLING]
             print(f"  version {api}, as the add-on expects" + (" (LW_Coupling.lua changed: check it)" if changed_api else ""))
+        if not check_api(new_lw, new):
+            needs_work = True
     elif COUPLING in new_lw:
         switch_to_v2 = bool(replaced)
         print(f"  ! Live Wire {new} has it (version {api}). This add-on still replaces {len(replaced)} Live Wire"
@@ -278,6 +305,7 @@ def main():
         print(f"    Release add-on 2.0 instead: {V2_MOD.relative_to(ROOT)} (see batman_LiveWireCoupling_v2/RELEASE.md).")
         if api != COUPLING_VERSION:
             print(f"  ! version {api}, the 2.0 build is written for {COUPLING_VERSION}: check LWC_Register.lua")
+        check_api(new_lw, new)
         needs_work = True
     else:
         print(f"  not in Live Wire {new}")

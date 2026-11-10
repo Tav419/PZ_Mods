@@ -92,6 +92,7 @@ local function freshLiveWire(withApi)
     if withApi then
         dofile(LIVEWIRE_LUA .. "/shared/LiveWire/LW_Extension.lua")
         dofile(LIVEWIRE_LUA .. "/shared/LiveWire/LW_Coupling.lua")
+        dofile(LIVEWIRE_LUA .. "/shared/LiveWire/LW_API.lua")
     end
     dofile(MOD_LUA .. "/shared/LiveWireCoupling/LWC_CouplingRange.lua")
 end
@@ -162,6 +163,22 @@ loadAddon()
 Reg = LiveWire.CouplingAddon
 check(Reg.ok == false and Reg.why == "already_registered", "taken: already_registered")
 check(lastPrint():find("already_registered", 1, true) ~= nil, "logs the reason: " .. lastPrint())
+
+---------------------------------------------------------------- LiveWire.API older than revision 3
+freshLiveWire(true)
+check(LiveWire.API.version == 1 and LiveWire.API.revision >= 3,
+    "Live Wire's API is version 1, revision 3 or newer, got " .. tostring(LiveWire.API.revision))
+check(type(LiveWire.API.anchors) == "function" and type(LiveWire.API.onRangeView) == "function"
+    and type(LiveWire.API.rangeColor) == "function" and type(LiveWire.API.hideRange) == "function"
+    and type(LiveWire.API.rangeShown) == "function" and type(LiveWire.API.mark) == "function"
+    and type(LiveWire.API.markOnSquare) == "function" and type(LiveWire.API.invertersInRange) == "function"
+    and type(LiveWire.API.distance) == "function", "the API functions the add-on uses exist")
+LiveWire.API.revision = 2
+loadAddon()
+Reg = LiveWire.CouplingAddon
+check(Reg.ok == false and Reg.why == "old_api", "API revision 2: old_api, got " .. tostring(Reg.why))
+check(lastPrint():find("needs revision 3", 1, true) ~= nil, "logs that the API is too old: " .. lastPrint())
+check(not LiveWire.Coupling.slaveKeepsZone(), "old API: Live Wire's own behaviour")
 
 ---------------------------------------------------------------- Live Wire without the extension point
 freshLiveWire(false)

@@ -150,7 +150,7 @@ LiveWire.Anchor = {
 }
 -- Shared files (Live Wire's, then the add-on's), then server files, as the game loads them.
 for _, f in ipairs({ "LW_Config", "LW_Defs", "LW_Marks", "LW_Inventory", "LW_Barrels", "LW_Install",
-        "LW_Extension", "LW_Coupling", "LW_EventBus", "LW_CircuitProvider",
+        "LW_Extension", "LW_Coupling", "LW_API", "LW_EventBus", "LW_CircuitProvider",
         "TimedActions/LW_BaseAction", "TimedActions/LW_TimedActions" }) do
     dofile(LW .. "/shared/LiveWire/" .. f .. ".lua")
 end

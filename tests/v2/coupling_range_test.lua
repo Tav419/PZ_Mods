@@ -88,6 +88,7 @@ end
 ---------------------------------------------------------------- load
 local installBefore = {}
 for k, v in pairs(Install) do installBefore[k] = v end
+dofile(LIVEWIRE_LUA .. "/shared/LiveWire/LW_API.lua")
 dofile(MOD_LUA .. "/shared/LiveWireCoupling/LWC_CouplingRange.lua")
 local CR = LiveWire.CouplingRange
 check(CR ~= nil, "LiveWire.CouplingRange defined")

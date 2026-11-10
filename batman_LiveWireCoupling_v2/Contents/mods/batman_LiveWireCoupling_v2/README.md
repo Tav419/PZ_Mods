@@ -6,8 +6,9 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3821807453
 
 This add-on requires Live Wire (`require=batman_LiveWire`). Since version 2.0.0
 it replaces no Live Wire files: it plugs into Live Wire's coupling extension
-point (`LiveWire.Coupling`), which batman-fr added for it. It needs a Live Wire
-version that has that extension point.
+point (`LiveWire.Coupling`), which batman-fr added for it, and reads Live Wire
+through its public API (`LiveWire.API`, revision 3 or newer). It needs a Live
+Wire version that has both.
 
 ## What it changes
 
@@ -21,7 +22,8 @@ Once the add-on is registered, Live Wire itself handles every zone of the networ
 billing (the load of all zones, each appliance counted once where zones overlap),
 the breaker panel's circuits, the management computer's load shedding, coupled
 inverters switching on and off with their master, "Show range" on a coupled
-inverter, and the master's screen opened from a coupled inverter.
+inverter, and the master's screen opened from a coupled inverter (it stays open
+near any inverter of the network).
 
 The add-on's files, under `42.21/media/`:
 
@@ -33,9 +35,6 @@ The add-on's files, under `42.21/media/`:
   (below) and the search for inverters past the cable range, through Live Wire's
   anchor table.
 - `lua/client/LiveWireCoupling/LWC_ZonesView.lua`: "Show all powered areas".
-- `lua/client/LiveWireCoupling/LWC_ScreenRange.lua`: keeps the inverter screen
-  open near any inverter of the network (it wraps the screen's update, so
-  `LW_InverterPanel.lua` is not replaced).
 - `sandbox-options.txt`: the "Coupling range" option.
 - `lua/shared/Translate/EN/Sandbox.json`: the option's page title, name and
   tooltip (other languages show the English text). It adds to Live Wire's
@@ -75,10 +74,10 @@ batteries...) does not change.
   loaded around you on a 1080p screen, less on smaller screens (about 48 tiles
   at 1366x768). A master farther than that is not listed. With no master in
   reach, the menu says "No inverter within N tiles".
-- A coupled inverter's menu shows how far its master is. If the master is past
-  the coupling range (the option was lowered after coupling), it says the
-  master is far instead. "Show all powered areas" finds the whole network at
-  any distance.
+- A coupled inverter's menu shows how far its master is, even past the
+  coupling range (the option was lowered after coupling), as long as the
+  master is loaded. "Show all powered areas" finds the whole network at any
+  distance.
 - Lowering the option later does not uncouple inverters already coupled.
 
 ## Inverter screen
@@ -95,16 +94,20 @@ LiveWire Extended (batman-fr's optional sub-mod) takes the radius away from ever
 inverter: power only reaches connected buildings and terminal zones. A coupled
 inverter keeping its zone then changes nothing; the coupling range still applies.
 
-## Before disabling or removing this add-on
+## Disabling or removing this add-on
 
-Uncouple all slave inverters first. Live Wire doesn't clean up the extra powered
-zones afterwards, so they could stay powered.
+Nothing to do first. When a save loads without the add-on, Live Wire switches
+off the extra powered zones of coupled inverters (they share their master's
+capacity again, as in plain Live Wire). If the add-on is enabled again later,
+the zones come back.
 
 ## Version history
 
 - 2.0.0: uses Live Wire's new coupling extension point instead of replacing 8
   Live Wire files, so Live Wire updates no longer break the add-on or undo
   batman-fr's fixes. Same features. Needs a Live Wire with the extension point.
+  Live Wire now keeps the master's screen open near a far coupled inverter, and
+  cleans up the coupled zones if the add-on is removed.
 - 1.4.0: updated for Live Wire 1.7.2 (fixes the errors when linking equipment,
   a generator or a computer, and when coupling inverters).
 - 1.3.0: updated for Live Wire 1.7.0 (fixes the management software error,

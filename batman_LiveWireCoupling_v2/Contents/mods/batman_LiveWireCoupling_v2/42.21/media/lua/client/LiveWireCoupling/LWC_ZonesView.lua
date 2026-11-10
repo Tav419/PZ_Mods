@@ -11,12 +11,14 @@
 -- which otherwise stays on screen after its inverter is gone.
 -- The menu option comes through Live Wire's coupling extension point (the `menu`
 -- that LWC_Register.lua registers calls ZV.addMenu). Live Wire's "Show range"
--- replaces this view: Menu.onShowRange is wrapped below, so LW_ContextMenu.lua is
--- not replaced.
+-- replaces this view: LiveWire.API.onRangeView tells it when an inverter's range is
+-- shown. Everything goes through LiveWire.API except the powered area's radius and
+-- floors (LiveWire.Config.tileRange/verticalRange: the API has no getter for them).
 if isServer() then return end
 
 require "ISUI/ISUIElement"
-require "LiveWire/LW_ContextMenu"
+require "LiveWire/LW_Config"
+require "LiveWire/LW_API"
 require "LiveWireCoupling/LWC_CouplingRange"
 
 LiveWire = LiveWire or {}
@@ -32,6 +34,17 @@ ZV.CHECK_TICKS = 30   -- how often removed inverters are looked for
 ZV.networkId = nil    -- master inverter id of the network shown
 ZV.centers = nil      -- list of { x, y, z, id }, one per inverter
 ZV.element = nil
+ZV.rangeId = nil      -- inverter whose Live Wire "Show range" circle is on screen
+ZV.rangeAt = nil      -- { x, y, z } of that inverter
+
+local API = LiveWire.API
+local DEFAULT_COLOR = { r = 0.25, g = 0.9, b = 1.0, a = 0.9 }
+
+-- Live Wire's range line colour, read once.
+function ZV.color()
+    if not ZV.lineColor then ZV.lineColor = API.rangeColor and API.rangeColor() or DEFAULT_COLOR end
+    return ZV.lineColor
+end
 
 local Overlay = ISUIElement:derive("LiveWireZonesOverlay")
 
@@ -53,7 +66,7 @@ function Overlay:render()
     local R = LiveWire.Config.tileRange()
     local floors = LiveWire.Config.verticalRange()
     local pz = math.floor(player:getZ())
-    local col = LiveWire.RangeView.COLOR
+    local col = ZV.color()
     -- Floor each circle is drawn on.
     local zs = {}
     for i = 1, #list do
@@ -107,6 +120,17 @@ function ZV.hide()
         ZV.element:setVisible(false)
         ZV.element:removeFromUIManager()
         ZV.element = nil
+ZV.rangeId = nil      -- inverter whose Live Wire "Show range" circle is on screen
+ZV.rangeAt = nil      -- { x, y, z } of that inverter
+
+local API = LiveWire.API
+local DEFAULT_COLOR = { r = 0.25, g = 0.9, b = 1.0, a = 0.9 }
+
+-- Live Wire's range line colour, read once.
+function ZV.color()
+    if not ZV.lineColor then ZV.lineColor = API.rangeColor and API.rangeColor() or DEFAULT_COLOR end
+    return ZV.lineColor
+end
     end
     ZV.networkId, ZV.centers = nil, nil
 end
@@ -117,7 +141,7 @@ end
 -- when the master is not loaded). `obj` is always included.
 function ZV.collect(obj)
     local CR = LiveWire.CouplingRange
-    local mark = LiveWire.Marks.get(obj)
+    local mark = API.mark(obj)
     local netId = ZV.networkOf(mark)
     local base = obj
     if mark.cpl then base = CR.inverterById(obj:getSquare(), mark.cpl) or obj end
@@ -131,7 +155,7 @@ function ZV.collect(obj)
     add(obj, mark.id)
     local list = CR.inverters(base:getSquare(), nil)
     for i = 1, #list do
-        local m = LiveWire.Marks.get(list[i].obj)
+        local m = API.mark(list[i].obj)
         if m and (m.id == netId or m.cpl == netId) then add(list[i].obj, m.id) end
     end
     return netId, centers
@@ -153,7 +177,7 @@ end
 local function gone(c, id)
     local cell = getCell()
     local sq = cell and cell:getGridSquare(c.x, c.y, c.z)
-    return sq ~= nil and LiveWire.Marks.findOnSquare(sq, id) == nil
+    return sq ~= nil and API.markOnSquare(sq, id) == nil
 end
 
 local function dropRemoved()
@@ -165,11 +189,12 @@ local function dropRemoved()
         end
         if #kept == 0 then ZV.hide() else ZV.centers = kept end
     end
-    -- Live Wire's "Show range": only an inverter's circle (a pump's circle has options
-    -- and is managed by LW_PumpView.lua).
-    local RV = LiveWire.RangeView
-    if RV and RV.inverterId and RV.center and not RV.opts and gone(RV.center, RV.inverterId) then
-        RV.hide()
+    -- Live Wire's "Show range" of an inverter (API.onRangeView reports only those; a
+    -- pump's circle is managed by Live Wire's pump view).
+    if ZV.rangeId and ZV.rangeAt and gone(ZV.rangeAt, ZV.rangeId) then
+        local id = ZV.rangeId
+        ZV.rangeId, ZV.rangeAt = nil, nil
+        if API.rangeShown(id) then API.hideRange() end
     end
 end
 
@@ -196,14 +221,15 @@ Events.OnTick.Add(onTick)
 -- "Show all powered areas": every inverter of the network at once. It replaces
 -- Live Wire's single inverter circle and a pump's taps view.
 function ZV.toggle(player, obj)
-    local mark = LiveWire.Marks.get(obj)
+    local mark = API.mark(obj)
     if not mark or not obj:getSquare() then return end
     if ZV.isShown(ZV.networkOf(mark)) then
         ZV.hide()
         return
     end
-    LiveWire.PumpView.hide()
-    LiveWire.RangeView.hide()
+    -- Hides Live Wire's circle, an inverter's or a pump's (the pump view then clears
+    -- its highlights itself).
+    API.hideRange()
     ZV.show(ZV.collect(obj))
 end
 
@@ -219,13 +245,19 @@ function ZV.addMenu(menu, player, obj, mark, isSlave)
     menu:addOption(getTextOrNull(key) or text, player, ZV.toggle, obj)
 end
 
--- Live Wire's "Show range" hides this view first, so only one view is on screen.
--- Live Wire's own function is kept once (a reloaded file must not wrap the wrapper).
-local Menu = LiveWire.Menu
-if Menu and Menu.onShowRange then
-    ZV.baseOnShowRange = ZV.baseOnShowRange or Menu.onShowRange
-    function Menu.onShowRange(player, id, sq)
+-- Live Wire's "Show range" of an inverter hides this view, so only one view is on
+-- screen. It also remembers where that inverter is, for dropRemoved.
+function ZV.onRangeView(inverterId, shown)
+    if shown then
         ZV.hide()
-        return ZV.baseOnShowRange(player, id, sq)
+        local a = API.anchors()[inverterId]
+        ZV.rangeId, ZV.rangeAt = inverterId, a and { x = a.x, y = a.y, z = a.z } or nil
+    elseif ZV.rangeId == inverterId then
+        ZV.rangeId, ZV.rangeAt = nil, nil
     end
 end
+
+-- One listener for good: a reloaded file registers the same function again, which
+-- Live Wire keeps once, and it calls the reloaded ZV.onRangeView.
+ZV.listener = ZV.listener or function(inverterId, shown) return ZV.onRangeView(inverterId, shown) end
+if API and API.onRangeView then API.onRangeView(ZV.listener) end
