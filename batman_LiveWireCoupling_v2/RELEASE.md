@@ -78,7 +78,15 @@ expected: it means "release 2.0.0".
    check that the server downloaded 2.0.0 and it matches the repo. The console
    must log `[LiveWireCoupling] registered with Live Wire's coupling extension
    point` and `[LiveWire] version X, registry ready`, with no new errors.
-6. Commit, push, tell batman-fr it's live.
+6. **Post in batman-fr's Live Wire Discord**, where many subscribers found the
+   add-on (draft below).
+7. Commit, push, tell batman-fr it's live.
+
+### Discord post (draft)
+
+```
+Live Wire: Coupled Inverter Zones 2.0 is up for the new Live Wire X.Y.Z. If you use it and see errors after the Live Wire update, make sure Steam has updated the add-on to 2.0 (restart the game or server after it updates). Same features and settings, and existing saves keep their coupled areas. https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476
+```
 
 ### In-game test list
 
