@@ -155,7 +155,7 @@ Live Wire: Coupled Inverter Zones 2.0, now an official Live Wire add-on, is up f
 - Still with Extended: link a power terminal and a breaker board to a coupled
   inverter. Both work, and after an in-game hour they're still linked.
   Uncouple that inverter, then couple it again: its buildings, terminal and
-  board come back with it.
+  board should stay with it the whole time.
 - Multiplayer: the same on the server with a second player.
 
 ## Steam Workshop description (draft for 2.0.0)
