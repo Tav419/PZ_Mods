@@ -1,6 +1,6 @@
 # Add-on 2.0.0: status and release checklist
 
-## Status (2026-11-10)
+## Status (2026-11-10, evening)
 
 - **batman-fr's release: moved to 2026-11-11** (Live Wire and LiveWire
   Extended; he said on 2026-11-10 at 16:00 UTC he had too much left to finish).
@@ -20,21 +20,22 @@
   getter for those. The add-on refuses to register,
   with a console line, on an API older than revision 3.
 - **Built and tested offline.** `tests/v2/` passes against Live Wire's beta
-  branch (commit 2be1162): 172 checks, including Live Wire's own linking,
+  branch (commit 2be1162, then 7f36797): 172 checks, including Live Wire's own linking,
   coupling, menu, API and range view code with the add-on registered.
 - **Tested in game on the beta (2026-11-10, Josh, solo).** Without Extended,
   everything passed: registration, coupling about 60 tiles apart with range 70,
   the coupled inverter's own area, "Show all powered areas" and "Show range"
   replacing each other, the master's screen staying open at the far inverter,
   I/O from there, and picking up the coupled inverter.
-- **LiveWire Extended issue (Extended's, not ours; sent to batman-fr
-  2026-11-10):** Extended treats a coupled inverter as removed
-  (`LWX_Inverters.get/ofObject` return nil when `dev.coupled`). Its hourly
-  cleanup forgets the coupled inverter's buildings without taking their power
-  back (`areas of removed inverter dNN forgotten`), and "Connect the building"
-  / "Disconnect building" on a coupled inverter fail silently. Josh's call: if
-  it isn't fixed in batman-fr's release, add the "known issue" note
-  below (release day, step 2).
+- **LiveWire Extended issue: fixed by batman-fr (beta commit 7f36797,
+  2026-11-10 evening).** Extended treated a coupled inverter as removed, so its
+  hourly cleanup forgot the coupled inverter's buildings and Connect/Disconnect
+  building on it failed silently. Now `LWX_Inverters.ownsZone` accepts a coupled
+  inverter while an add-on keeps zones (`Coupling.slaveKeepsZone()`): it keeps
+  its buildings, terminals and breaker boards. Without such an add-on, "Connect
+  the building" is greyed out on a coupled inverter. `tests/v2/` still passes
+  on 7f36797 (172 checks). Not yet tested in game; it's in the release-day
+  test list.
 - The current release, 1.4.0, **breaks with the beta**: its copied files lack
   functions the new Live Wire calls (the offline tests fail). 2.0.0 has to go
   out the same day as the Live Wire release.
@@ -93,10 +94,9 @@ expected: it means "release 2.0.0".
      `modversion=2.0.0`, description with "Made for Live Wire X.Y.Z" (the new
      version; the update check reads it).
    - `README.md`: the 2.0 build's, with the Live Wire version filled in.
-   - **If the release's Extended still has the issue above** (check
-     `LWX_Inverters.lua`), replace the "With LiveWire Extended" section of the
-     README and of the Steam description with the "known issue"
-     versions below.
+   - Check that the release contains batman-fr's Extended fix (7f36797:
+     `Inv.ownsZone` in `LWX_Inverters.lua`). If it somehow doesn't, the
+     "known issue" texts are in git history (commit 3716546, end of this file).
    - Tests: move `tests/v2/*` to `tests/`, delete the old ones and the v2 rule in
      `run_tests.py`; check `.livewire` out at the new tag; run the tests.
    - Zip into `dist/` for Josh's PC.
@@ -148,7 +148,10 @@ Live Wire: Coupled Inverter Zones 2.0, now an official Live Wire add-on, is up f
   inverters' own areas are off (console: `dropped the zone of N coupled
   inverter(s)`). Enable it again: the areas come back.
 - With LiveWire Extended enabled too: no errors, coupling still works, and
-  "Show all powered areas" is not in the inverter menu.
+  "Show all powered areas" is not in the inverter menu. Connect a building to
+  a coupled inverter: it gets power, and after an in-game hour it's still
+  connected (no `areas of removed inverter ... forgotten` in the console);
+  "Disconnect building" works on it.
 - Multiplayer: the same on the server with a second player.
 
 ## Steam Workshop description (draft for 2.0.0)
@@ -172,7 +175,7 @@ In Live Wire, coupling an inverter to another one only adds capacity: the couple
 The add-on no longer replaces any Live Wire file. It plugs into the coupling extension point batman-fr added to Live Wire, so Live Wire updates no longer break it. Same features, same settings, existing saves keep their coupled areas.
 
 [h2]With LiveWire Extended[/h2]
-Works alongside it. Extended takes the radius away from every inverter (power only reaches connected buildings and terminal zones), so coupled inverters keeping their own area changes nothing there, and "Show all powered areas" is not offered. The coupling range and the shared load and capacity still apply.
+Works alongside it. Extended takes the radius away from every inverter (power only reaches connected buildings and terminal zones). With the add-on, a coupled inverter keeps its own connected buildings, terminals and breaker boards, like an independent one. The coupling range and the shared load and capacity still apply. "Show all powered areas" is not offered there, since there are no circles to show.
 
 [h2]Server setup[/h2]
 Add [b]batman_LiveWireCoupling[/b] to Mods= after batman_LiveWire. Set the Coupling range on the sandbox page "Live Wire: Coupled Inverter Zones".
@@ -185,31 +188,3 @@ Live Wire is by batman-fr (cyberbobjr on GitHub), MIT license. This add-on is ma
 ```
 
 Fill in the Live Wire version, and check the GitHub link before posting.
-
-### If Extended isn't fixed: "known issue" texts
-
-Steam, in place of the "With LiveWire Extended" section:
-
-```
-[h2]With LiveWire Extended: one known issue[/h2]
-Works alongside it, with one known issue: buildings connected to a coupled inverter aren't kept reliably. Extended drops them within an in-game hour (they stay powered but are no longer managed), and connecting or disconnecting a building on a coupled inverter does nothing. Connect buildings to the master instead, or uncouple first. batman-fr knows about it, and this note will go once it's fixed. Extended takes the radius away from every inverter, so "Show all powered areas" is not offered there; the coupling range and the shared load and capacity still apply.
-```
-
-README, in place of the "With LiveWire Extended" section:
-
-```
-## With LiveWire Extended: one known issue
-
-LiveWire Extended (batman-fr's optional sub-mod) takes the radius away from every
-inverter: power only reaches connected buildings and terminal zones. The add-on
-works alongside it, with one known issue: Extended treats a coupled inverter as
-removed. Within an in-game hour it drops the buildings connected to a coupled
-inverter (they stay powered but are no longer managed or counted), and "Connect
-the building" / "Disconnect building" on a coupled inverter do nothing. Connect
-buildings to the master instead, or uncouple first. batman-fr knows about it;
-this section will change once it's fixed.
-
-- Coupled inverters still share one load and one capacity, and the coupling
-  range still applies.
-- "Show all powered areas" is not offered, since there are no circles to show.
-```
