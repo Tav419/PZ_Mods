@@ -2,16 +2,16 @@
 
 ## Status (2026-11-10, evening)
 
-- **batman-fr's release: moved to 2026-11-11** (Live Wire and LiveWire
+- **batman-fr's release: moved to 2026-11-11** (LiveWire and LiveWire
   Extended; he said on 2026-11-10 at 16:00 UTC he had too much left to finish).
   He'll ping Josh with the time before publishing, so 2.0.0 goes out the same
   day. If the beta moves before then, pull it and rerun `tests/v2/`.
-- **All of Josh's questions are answered in Live Wire itself** (beta commit
+- **All of Josh's questions are answered in LiveWire itself** (beta commit
   2be1162, D-57): the inverter screen stays open near any inverter of the
-  network, `Coupling.inverterById` finds the master at any distance, Live Wire
+  network, `Coupling.inverterById` finds the master at any distance, LiveWire
   drops the coupled zones at load when no add-on keeps them, and
-  `LiveWire.API` revision 3 has what the add-on used Live Wire internals for.
-- **Moved onto the API (2026-11-10).** `LWC_ScreenRange.lua` is gone (Live Wire
+  `LiveWire.API` revision 3 has what the add-on used LiveWire internals for.
+- **Moved onto the API (2026-11-10).** `LWC_ScreenRange.lua` is gone (LiveWire
   does it), the `Menu.onShowRange` wrapper is replaced by `API.onRangeView`, and
   anchors, marks, distances and the range view go through `LiveWire.API`. Only
   `LiveWire.Config` (cable range, powered-area radius and floors) and
@@ -19,8 +19,8 @@
   to hide "Show all powered areas") are still read directly: the API has no
   getter for those. The add-on refuses to register,
   with a console line, on an API older than revision 3.
-- **Built and tested offline.** `tests/v2/` passes against Live Wire's beta
-  branch (commit 2be1162, then 7f36797): 172 checks, including Live Wire's own linking,
+- **Built and tested offline.** `tests/v2/` passes against LiveWire's beta
+  branch (commit 2be1162, then 7f36797): 172 checks, including LiveWire's own linking,
   coupling, menu, API and range view code with the add-on registered.
 - **Tested in game on the beta (2026-11-10, Josh, solo).** Without Extended,
   everything passed: registration, coupling about 60 tiles apart with range 70,
@@ -37,21 +37,21 @@
   on 7f36797 (172 checks). Not yet tested in game; it's in the release-day
   test list.
 - The current release, 1.4.0, **breaks with the beta**: its copied files lack
-  functions the new Live Wire calls (the offline tests fail). 2.0.0 has to go
-  out the same day as the Live Wire release.
+  functions the new LiveWire calls (the offline tests fail). 2.0.0 has to go
+  out the same day as the LiveWire release.
 
 ## What 2.0.0 is
 
-The same features as 1.4.0, without replacing any Live Wire file:
+The same features as 1.4.0, without replacing any LiveWire file:
 
 | 1.4.0 | 2.0.0 |
 |---|---|
-| 8 modified copies of Live Wire files | none: Live Wire does it once the add-on registers |
-| wraps `Install.checkCouple` to swap the cable range | hands Live Wire the coupling range (`range`) |
-| "Show all powered areas" added in the copied menu file | added through Live Wire's menu hook (`menu`) |
-| `LWC_ScreenRange` keeps the far master's screen open | removed: Live Wire does it |
+| 8 modified copies of LiveWire files | none: LiveWire does it once the add-on registers |
+| wraps `Install.checkCouple` to swap the cable range | hands LiveWire the coupling range (`range`) |
+| "Show all powered areas" added in the copied menu file | added through LiveWire's menu hook (`menu`) |
+| `LWC_ScreenRange` keeps the far master's screen open | removed: LiveWire does it |
 | wraps `Menu.onShowRange`, reads `Anchor`/`RangeView`/`Marks` | `LiveWire.API` revision 3 (`onRangeView`, `anchors`, `hideRange`...) |
-| "uncouple everything before removing the add-on" | not needed: Live Wire cleans up at load |
+| "uncouple everything before removing the add-on" | not needed: LiveWire cleans up at load |
 | `LWC_ZonesView`, the sandbox option | kept |
 
 The mod id, the sandbox option (`LiveWireCoupling.CouplingRange`) and the save
@@ -75,7 +75,7 @@ Also re-read `shared/LiveWire/LW_Coupling.lua` and the places that call it
 
 ## Release day
 
-Live Wire's new version shows up on Steam. The server's auto-update holds the
+LiveWire's new version shows up on Steam. The server's auto-update holds the
 restart (`LIVE WIRE CHECK ... HOLD`), and its check logs `ADD-ON NEEDS AN UPDATE`
 then `DEV BUILD NOT MADE (... has the coupling extension point ...)`. That's
 expected: it means "release 2.0.0".
@@ -90,41 +90,44 @@ expected: it means "release 2.0.0".
      the 8 copies under `client/LiveWire/` and `server/LiveWire/`). Keep
      `sandbox-options.txt` and `Translate/EN/Sandbox.json`.
    - `mod.info`: name and id of the release (`batman_LiveWireCoupling`), the
-     description's "Official add-on for Live Wire, made by Tav419" kept,
-     `modversion=2.0.0`, description with "Made for Live Wire X.Y.Z" (the new
+     description's "Official add-on for LiveWire, made by Tav419" kept,
+     `modversion=2.0.0`, description with "Made for LiveWire X.Y.Z" (the new
      version; the update check reads it).
-   - `README.md`: the 2.0 build's, with the Live Wire version filled in.
+   - `README.md`: the 2.0 build's, with the LiveWire version filled in.
    - Check that the release contains batman-fr's Extended fix (7f36797:
      `Inv.ownsZone` in `LWX_Inverters.lua`). If it somehow doesn't, the
      "known issue" texts are in git history (commit 3716546, end of this file).
    - Tests: move `tests/v2/*` to `tests/`, delete the old ones and the v2 rule in
      `run_tests.py`; check `.livewire` out at the new tag; run the tests.
    - Zip into `dist/` for Josh's PC.
-3. **Josh tests in solo** with the new Live Wire from Steam: the test list below.
+3. **Josh tests in solo** with the new LiveWire from Steam: the test list below.
 4. **Josh uploads** the new preview image (with the "Official add-on" ribbon,
    approved by batman-fr 2026-11-10) and the mod to Workshop item 3830945476 from his PC folder
    (`C:\Users\jdshr\Zomboid\Workshop\LiveWireCoupling\`), keeping his
    `workshop.txt` (its `id=` line keeps it the same item) and Public visibility.
-   Update the Steam description (draft below).
+   Update the Steam description (draft below), and change the Workshop title
+   to "LiveWire: Coupled Inverter Zones" (batman-fr renamed Live Wire to
+   LiveWire on 2026-11-10, beta d8bb5d2). If the preview image spells out
+   "Live Wire", it needs the same change.
 5. **Server** (rules in `~/pzserver/CLAUDE.md`), soon after the upload: once
-   Live Wire's update is on Steam, players' games download it while the held
+   LiveWire's update is on Steam, players' games download it while the held
    server still runs the old one, so they may not be able to join until the
    server is updated. Check who's online, back up
-   the save and config, allow the held Live Wire with
+   the save and config, allow the held LiveWire with
    `echo <version> > ~/.pzserver-livewire-allow` (Josh's OK), restart, and
    check that the server downloaded 2.0.0 and it matches the repo. The console
-   must log `[LiveWireCoupling] registered with Live Wire's coupling extension
+   must log `[LiveWireCoupling] registered with LiveWire's coupling extension
    point` and `[LiveWire] version X, registry ready`, with no new errors, and
    no `dropped the zone of N coupled inverter(s)` line (that would mean the
    add-on didn't register).
-6. **Post in batman-fr's Live Wire Discord**, where many subscribers found the
+6. **Post in batman-fr's LiveWire Discord**, where many subscribers found the
    add-on (draft below).
 7. Commit, push, tell batman-fr it's live.
 
 ### Discord post (draft)
 
 ```
-Live Wire: Coupled Inverter Zones 2.0, now an official Live Wire add-on, is up for the new Live Wire X.Y.Z. If you use it and see errors after the Live Wire update, make sure Steam has updated the add-on to 2.0 (restart the game or server after it updates). Same features and settings, and existing saves keep their coupled areas. https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476
+LiveWire: Coupled Inverter Zones 2.0, now an official LiveWire add-on, is up for the new LiveWire X.Y.Z. If you use it and see errors after the LiveWire update, make sure Steam has updated the add-on to 2.0 (restart the game or server after it updates). Same features and settings, and existing saves keep their coupled areas. https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476
 ```
 
 ### In-game test list
@@ -161,34 +164,34 @@ Live Wire: Coupled Inverter Zones 2.0, now an official Live Wire add-on, is up f
 ## Steam Workshop description (draft for 2.0.0)
 
 ```
-[h1]Live Wire: Coupled Inverter Zones[/h1]
+[h1]LiveWire: Coupled Inverter Zones[/h1]
 
-An [b]official add-on[/b] for [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3821807453]Live Wire – Electrical Skill Overhaul[/url] by batman-fr. Requires Live Wire X.Y.Z or newer.
+An [b]official add-on[/b] for [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3821807453]LiveWire - Electrical Skill Overhaul[/url] by batman-fr. Requires LiveWire X.Y.Z or newer.
 
-In Live Wire, coupling an inverter to another one only adds capacity: the coupled inverter loses its own powered area. With this add-on, every coupled inverter keeps its own powered area, while the whole network shares one load and one capacity. Works with the inverter cabinet too.
+In LiveWire, coupling an inverter to another one only adds capacity: the coupled inverter loses its own powered area. With this add-on, every coupled inverter keeps its own powered area, while the whole network shares one load and one capacity. Works with the inverter cabinet too.
 
 [h2]Features[/h2]
 [list]
 [*]Coupled inverters keep their own powered area. Billing, breakers, the management computer and the master's screen cover every area of the network.
 [*][b]Show all powered areas[/b]: right-click any inverter to see the whole network's areas at once.
-[*][b]Coupling range[/b] sandbox option (own page): couple inverters up to 70 tiles apart. 0 = Live Wire's cable range.
+[*][b]Coupling range[/b] sandbox option (own page): couple inverters up to 70 tiles apart. 0 = LiveWire's cable range.
 [*]The master's screen works from any coupled inverter, even a far one.
 [/list]
 
 [h2]New in 2.0.0[/h2]
-The add-on no longer replaces any Live Wire file. It plugs into the coupling extension point batman-fr added to Live Wire, so Live Wire updates no longer break it. Same features, same settings, existing saves keep their coupled areas.
+The add-on no longer replaces any LiveWire file. It plugs into the coupling extension point batman-fr added to LiveWire, so LiveWire updates no longer break it. Same features, same settings, existing saves keep their coupled areas.
 
 [h2]With LiveWire Extended[/h2]
 Works alongside it. Extended takes the radius away from every inverter (power only reaches connected buildings and terminal zones). With the add-on, a coupled inverter keeps its own connected buildings, terminals and breaker boards, like an independent one. The coupling range and the shared load and capacity still apply. "Show all powered areas" is not offered there, since there are no circles to show.
 
 [h2]Server setup[/h2]
-Add [b]batman_LiveWireCoupling[/b] to Mods= after batman_LiveWire. Set the Coupling range on the sandbox page "Live Wire: Coupled Inverter Zones".
+Add [b]batman_LiveWireCoupling[/b] to Mods= after batman_LiveWire. Set the Coupling range on the sandbox page "LiveWire: Coupled Inverter Zones".
 
 [h2]Removing the add-on[/h2]
-Nothing to do first: Live Wire switches off the coupled inverters' extra powered areas when a save loads without the add-on.
+Nothing to do first: LiveWire switches off the coupled inverters' extra powered areas when a save loads without the add-on.
 
 [h2]Credits[/h2]
-Live Wire is by batman-fr (cyberbobjr on GitHub), MIT license. This add-on is made by Tav419 and is an official Live Wire add-on, with batman-fr's blessing. Thanks to batman-fr for building the coupling extension point that 2.0 runs on. Please report add-on issues here, not to batman-fr. Source: https://github.com/Tav419/PZ_Mods
+LiveWire is by batman-fr (cyberbobjr on GitHub), MIT license. This add-on is made by Tav419 and is an official LiveWire add-on, with batman-fr's blessing. Thanks to batman-fr for building the coupling extension point that 2.0 runs on. Please report add-on issues here, not to batman-fr. Source: https://github.com/Tav419/PZ_Mods
 ```
 
-Fill in the Live Wire version, and check the GitHub link before posting.
+Fill in the LiveWire version, and check the GitHub link before posting.

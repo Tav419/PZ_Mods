@@ -48,8 +48,8 @@ function Reg.register()
     local C = LiveWire.Coupling
     if type(C) ~= "table" or type(C.register) ~= "function" then
         Reg.ok, Reg.why = false, "no_coupling_api"
-        say("this Live Wire has no coupling extension point (LiveWire.Coupling). "
-            .. "Add-on 2.0.0 needs a newer Live Wire; coupled inverters keep Live Wire's own behaviour.")
+        say("this LiveWire has no coupling extension point (LiveWire.Coupling). "
+            .. "Add-on 2.0.0 needs a newer LiveWire; coupled inverters keep LiveWire's own behaviour.")
         return false, Reg.why
     end
     local API = LiveWire.API
@@ -57,18 +57,18 @@ function Reg.register()
     local rev = type(API) == "table" and tonumber(API.revision) or 0
     if ver < 1 or (ver == 1 and rev < Reg.API_REVISION) then
         Reg.ok, Reg.why = false, "old_api"
-        say("this Live Wire's API is revision " .. tostring(rev) .. "; add-on 2.0.0 needs revision "
-            .. Reg.API_REVISION .. " or newer. Coupled inverters keep Live Wire's own behaviour.")
+        say("this LiveWire's API is revision " .. tostring(rev) .. "; add-on 2.0.0 needs revision "
+            .. Reg.API_REVISION .. " or newer. Coupled inverters keep LiveWire's own behaviour.")
         return false, Reg.why
     end
     local ok, why = C.register(provider())
     Reg.ok, Reg.why = ok == true, why
     if Reg.ok then
-        say("registered with Live Wire's coupling extension point (version "
+        say("registered with LiveWire's coupling extension point (version "
             .. tostring(C.version) .. "): coupled inverters keep their own zone.")
     else
-        say("could not register with Live Wire's coupling extension point: " .. tostring(why)
-            .. ". Coupled inverters keep Live Wire's own behaviour.")
+        say("could not register with LiveWire's coupling extension point: " .. tostring(why)
+            .. ". Coupled inverters keep LiveWire's own behaviour.")
     end
     return Reg.ok, why
 end

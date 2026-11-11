@@ -121,7 +121,7 @@ check(names(Coupling.inverters(A:getSquare())) == "A B", "without the add-on: Li
 loadAddon()
 local Reg = LiveWire.CouplingAddon
 check(Reg.ok == true and Reg.why == nil, "registered, got " .. tostring(Reg.ok) .. " " .. tostring(Reg.why))
-check(lastPrint():find("registered with Live Wire", 1, true) ~= nil, "logs the registration: " .. lastPrint())
+check(lastPrint():find("registered with LiveWire", 1, true) ~= nil, "logs the registration: " .. lastPrint())
 check(Coupling.active() and Coupling.slaveKeepsZone(), "coupled inverters keep their zone")
 optionValue = 70
 check(Coupling.range() == 70, "range: the Coupling range option (70)")

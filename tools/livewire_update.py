@@ -248,9 +248,9 @@ def main():
         base = args.base
     else:
         info = (mod / game_dir([p.name for p in mod.iterdir() if p.is_dir()]) / "mod.info").read_text()
-        m = re.search(r"Made for Live Wire (\d+(?:\.\d+)+)", info)
+        m = re.search(r"Made for Live ?Wire (\d+(?:\.\d+)+)", info)
         if not m:
-            die(f'no "Made for Live Wire X.Y.Z" in {mod}/.../mod.info; pass --base')
+            die(f'no "Made for LiveWire X.Y.Z" in {mod}/.../mod.info; pass --base')
         base = "v" + m.group(1)
     new = args.tag or tags[-1]
     for t in (base, new):
