@@ -122,12 +122,20 @@ local function newChar(name, level)
         end
         return { size = function() return #list end, get = function(_, i) return list[i + 1] end }
     end
+    -- Live Wire needs a screwdriver to link and couple (beta d8bb5d2): carry one.
+    local screwdriver = { isBroken = function() return false end,
+                          hasTag = function() return true end }
+    function inv:getFirstTagEvalRecurse() return screwdriver end
+    function c:getPrimaryHandItem() return nil end
+    function c:getSecondaryHandItem() return nil end
     function c:getInventory() return inv end
     return c
 end
 
 ---------------------------------------------------------------- load Live Wire + the add-on
 local LW = LIVEWIRE_LUA
+ItemTag = ItemTag or { SCREWDRIVER = "Screwdriver" }
+BodyPartType = BodyPartType or { Hand_R = "Hand_R", Hand_L = "Hand_L" }
 dofile(LW .. "/shared/LiveWire/LW_Core.lua")
 local warnings = {}
 function LiveWire.log() end
