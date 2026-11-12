@@ -1,28 +1,25 @@
 -- Live Wire: Coupled Inverter Zones add-on. Coupling range: how far a coupled
 -- (slave) inverter can be from its master, set by the sandbox option
 -- LiveWireCoupling.CouplingRange (0 = Live Wire's cable range, LinkRange).
--- Live Wire checks the coupling distance in Install.checkCouple (LW_Install.lua),
--- on the client for the menu and on the authority when the coupling action
--- completes. The wrapper below makes that check use the coupling range, so
--- LW_Install.lua is not replaced. Cable range for equipment is unchanged.
--- Inverters past the cable range are found through the public anchor table (every
--- inverter has an anchor from the moment it is placed), not by scanning every
--- square. Only loaded squares count: the master must be within the area loaded
--- around the player.
+-- Live Wire reads it through its coupling extension point (LW_Coupling.lua):
+-- LWC_Register.lua hands it CR.get as `range` and CR.inverters as `inverters`, so
+-- Install.checkCouple and the "Couple to an inverter" menu use it. The cable range
+-- for equipment is unchanged.
+-- Inverters past the cable range are found through Live Wire's anchors
+-- (LiveWire.API.anchors: every inverter has one from the moment it is placed), not
+-- by scanning every square. Only loaded squares count: the master must be within
+-- the area loaded around the player.
+-- Everything goes through LiveWire.API except the two cable settings (LinkRange,
+-- LinkVerticalRange), read with LiveWire.Config.get: the API has no getter for them.
 require "LiveWire/LW_Config"
-require "LiveWire/LW_Install"
-require "LiveWire/LW_Anchor"
-require "LiveWire/LW_Marks"
+require "LiveWire/LW_API"
 
 LiveWire = LiveWire or {}
 
 local CR = LiveWire.CouplingRange or {}
 LiveWire.CouplingRange = CR
 
-local Config, Install = LiveWire.Config, LiveWire.Install
-
--- Live Wire's own check, kept once (a reloaded file must not wrap the wrapper).
-CR.baseCheckCouple = CR.baseCheckCouple or Install.checkCouple
+local Config, API = LiveWire.Config, LiveWire.API
 
 local function option()
     local opts = getSandboxOptions and getSandboxOptions()
@@ -41,23 +38,8 @@ function CR.get()
     return v
 end
 
--- Live Wire's check, with its cable range read as the coupling range while it runs.
-function Install.checkCouple(...)
-    local get = Config.get
-    local range = CR.get()
-    Config.get = function(name)
-        if name == "LinkRange" then return range end
-        return get(name)
-    end
-    local ok, a, b, c, d = pcall(CR.baseCheckCouple, ...)
-    Config.get = get
-    if not ok then error(a, 0) end
-    return a, b, c, d
-end
-
 -- Inverters on loaded squares within `range` tiles of `sq` and within Live Wire's
--- vertical cable range, nearest first, as Install.invertersInRange returns them
--- ({ obj, dist, kind }). `range` nil: any distance, any floor. Live Wire's usual
+-- vertical cable range, nearest first ({ obj, dist, kind }). `range` nil: any distance, any floor. Live Wire's usual
 -- search (within cable range) plus the anchors of the farther ones.
 function CR.inverters(sq, range)
     local out, seen = {}, {}
@@ -67,21 +49,21 @@ function CR.inverters(sq, range)
         seen[id] = true
         out[#out + 1] = { obj = o, dist = dist, kind = kind or "device" }
     end
-    local near = Install.invertersInRange(sq)
+    local near = API.invertersInRange(sq)
     for i = 1, #near do
         local e = near[i]
-        local m = LiveWire.Marks.get(e.obj)
+        local m = API.mark(e.obj)
         if not range or e.dist <= range then add(e.obj, m and m.id, e.dist, e.kind) end
     end
     local x0, y0, z0 = sq:getX(), sq:getY(), sq:getZ()
     local floors = Config.get("LinkVerticalRange")
     local cell = getCell()
-    for id, a in pairs(LiveWire.Anchor.table()) do
+    for id, a in pairs(API.anchors()) do
         if not seen[id] and a.x and a.y and a.z then
-            local dist, dz = Install.distance(x0, y0, z0, a.x, a.y, a.z)
+            local dist, dz = API.distance(x0, y0, z0, a.x, a.y, a.z)
             if not range or (dist <= range and dz <= floors) then
                 local s = cell and cell:getGridSquare(a.x, a.y, a.z)
-                local o = s and LiveWire.Marks.findOnSquare(s, id)
+                local o = s and API.markOnSquare(s, id)
                 if o then add(o, id, dist) end
             end
         end
@@ -90,12 +72,25 @@ function CR.inverters(sq, range)
     return out
 end
 
+-- Inverters a coupling can reach from `sq`: within the coupling range. Handed to
+-- Live Wire as the extension point's `inverters` (LWC_Register.lua).
+function CR.reachable(sq)
+    return CR.inverters(sq, CR.get())
+end
+
 -- Inverter with device id `id` on a loaded square, at any distance (through its
--- anchor), else Live Wire's search within cable range of `sq`; nil when not found.
+-- anchor), else among the inverters within cable range of `sq`; nil when not found.
 function CR.inverterById(sq, id)
     if not id then return nil end
-    local a = LiveWire.Anchor.table()[id]
+    local a = API.anchors()[id]
     local cell = getCell()
     local s = a and a.x and cell and cell:getGridSquare(a.x, a.y, a.z)
-    return (s and LiveWire.Marks.findOnSquare(s, id)) or Install.inverterById(sq, id)
+    local o = s and API.markOnSquare(s, id)
+    if o then return o end
+    local near = sq and API.invertersInRange(sq) or {}
+    for i = 1, #near do
+        local m = API.mark(near[i].obj)
+        if m and m.id == id then return near[i].obj end
+    end
+    return nil
 end

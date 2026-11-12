@@ -1,6 +1,0 @@
-name=LiveWire: Coupled Inverter Zones (2.0 DEV)
-id=batman_LiveWireCoupling_v2
-require=batman_LiveWire
-description=TEST BUILD of LiveWire: Coupled Inverter Zones 2.0.0. Needs a LiveWire with the coupling extension point (LiveWire.Coupling) and LiveWire.API revision 3 (LiveWire's beta branch as of 2026-11-10; due on Steam 2026-11-10). Replaces no LiveWire files anymore. Enable this OR batman_LiveWireCoupling, never both. Patch for LiveWire by batman-fr (cyberbobjr on GitHub), Workshop ID 3821807453. Official add-on for LiveWire, made by Tav419.
-versionMin=42.21
-modversion=2.0.0

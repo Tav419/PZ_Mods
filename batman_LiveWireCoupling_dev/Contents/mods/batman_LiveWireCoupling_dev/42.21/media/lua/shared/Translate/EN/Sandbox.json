@@ -1,5 +1,5 @@
 {
-    "Sandbox_LiveWireCoupling": "Live Wire: Coupled Inverter Zones",
+    "Sandbox_LiveWireCoupling": "LiveWire: Coupled Inverter Zones",
     "Sandbox_LiveWireCoupling_CouplingRange": "Coupling range (0 = same as Cable range)",
-    "Sandbox_LiveWireCoupling_CouplingRange_tooltip": "Maximum distance in tiles between a coupled inverter and its master. 0 = same as Live Wire's Cable range (on the Live Wire page). The cable range for lights and appliances does not change. The master must be within the area loaded around the player: about 70 tiles on a 1080p screen, less on smaller screens."
+    "Sandbox_LiveWireCoupling_CouplingRange_tooltip": "Maximum distance in tiles between a coupled inverter and its master. 0 = same as LiveWire's Cable range (on the LiveWire page). The cable range for lights and appliances does not change. The master must be within the area loaded around the player: about 70 tiles on a 1080p screen, less on smaller screens."
 }

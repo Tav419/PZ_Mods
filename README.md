@@ -6,9 +6,8 @@ Project Zomboid mods, targeting **Build 42** (the server runs 42.21.0).
 
 | Folder | What it is |
 |---|---|
-| [`batman_LiveWireCoupling/`](batman_LiveWireCoupling) | **Live Wire: Coupled Inverter Zones**, the released add-on for [Live Wire](https://github.com/cyberbobjr/LiveWire). Same files as the [Steam Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476); [its README](batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/README.md) lists every change. |
-| [`batman_LiveWireCoupling_dev/`](batman_LiveWireCoupling_dev) | Work in progress for the next version. Not for use. |
-| [`batman_LiveWireCoupling_v2/`](batman_LiveWireCoupling_v2) | The 2.0 test build, folded into the release on 2026-11-12 (LiveWire 2.0.0); kept for [its release checklist](batman_LiveWireCoupling_v2/RELEASE.md) until 2.0 is live. Not for use. |
+| [`batman_LiveWireCoupling/`](batman_LiveWireCoupling) | **LiveWire: Coupled Inverter Zones**, the released add-on for [LiveWire](https://github.com/cyberbobjr/LiveWire). Same files as the [Steam Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476); [its README](batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/README.md) lists every change. |
+| [`batman_LiveWireCoupling_dev/`](batman_LiveWireCoupling_dev) | Dev copy for the next version (mod id `batman_LiveWireCoupling_dev`); same as the release until new work starts. Not for use. |
 | [`tests/`](tests), [`tools/`](tools) | Offline tests and the Live Wire update checker (see below). |
 
 To play, subscribe on the Workshop rather than downloading from here.
@@ -98,30 +97,19 @@ Then run every test against the release, or the dev copy's `media/lua` folder:
 Name test files after the folder to run only those, and add
 `--livewire <folder>` to test against another Live Wire `media/lua` folder.
 
-## When Live Wire updates
+## When LiveWire updates
 
-The add-on replaces whole Live Wire files, so a Live Wire update to any of them
-has to be merged in, or the add-on breaks or undoes the author's fixes. Check a
-new release with:
+Since 2.0.0 the add-on replaces no LiveWire files: it registers with LiveWire's
+coupling extension point (`LW_Coupling.lua`) and reads LiveWire through
+`LiveWire.API`. Check a new LiveWire release with:
 
 ```bash
 python3 tools/livewire_update.py
 ```
 
-It compares the latest Live Wire tag with the version the release is built on:
-which replaced files changed, functions Live Wire added to them that the add-on
-lacks (what broke 1.3.0 on Live Wire 1.7.2), names the add-on uses that Live
-Wire removed (what broke 1.2.0 on 1.7.0), and the offline tests run with the
-new version. Exit status 0 means nothing to do.
-
-If the add-on needs an update, start the dev build with `--merge`. It 3-way
-merges the changed files into the dev copy, moves `.livewire` to the new tag
-and runs the tests. The dev copy's Lua must match the release first. Version
-numbers, mod.info, the README and the zip are then done by hand.
-
-Once a Live Wire release has the coupling extension point (`LW_Coupling.lua`),
-the check says so, runs the 2.0 build's tests with it, and `--merge` refuses to
-merge (exit 2): the release is replaced by the 2.0 build instead, see
-[its checklist](batman_LiveWireCoupling_v2/RELEASE.md). For a 2.0 release the
-check makes sure Live Wire still has the extension point at the version the
-add-on is written for.
+It compares the latest LiveWire tag with the version the release is built on
+("Made for LiveWire X.Y.Z" in mod.info): whether the extension point is still
+there at the version the add-on is written for, whether `LiveWire.API` still
+has what the add-on calls, and the offline tests run with the new version.
+Exit status 0 means nothing to do. If it needs work, make the change in the dev
+copy, test it, then fold it into the release.

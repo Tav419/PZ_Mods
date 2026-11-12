@@ -1,7 +1,0 @@
-VERSION = 1,
-
-option LiveWireCoupling.CouplingRange
-{
-    type = integer, min = 0, max = 70, default = 0,
-    page = LiveWireCoupling, translation = LiveWireCoupling_CouplingRange,
-}

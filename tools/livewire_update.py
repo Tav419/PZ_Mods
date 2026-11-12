@@ -28,20 +28,17 @@ checks out .livewire at the new tag and runs the tests on the dev copy. Version
 numbers, mod.info, README and zips are left to do by hand.
 
 Coupling extension point (LiveWire.Coupling, LW_Coupling.lua, from batman-fr's
-beta in November 2026): add-on 2.0 (batman_LiveWireCoupling_v2 until it is
-released) replaces no Live Wire files and registers with it instead.
-- A release that still replaces files, checked against a Live Wire that has the
-  extension point: the report says the 2.0 build must replace it, and runs the
-  2.0 build's tests with the new Live Wire. --merge then merges nothing and
-  exits 2 with that reason (an old-style merge would undo the switch).
+in LiveWire 2.0.0): add-on 2.0 (released 2026-11-12) replaces no LiveWire files
+and registers with it instead.
+- An add-on that still replaces files, checked against a LiveWire that has the
+  extension point: the report says it must move to the extension point.
 - A 2.0 add-on (it has LWC_Register.lua): the report checks that the new Live
   Wire still has the extension point, at the version the add-on is written for.
 - Either way, it checks that Live Wire's public API (LiveWire.API, LW_API.lua) is
   version 1 at revision 3 or newer: the 2.0 build reads Live Wire through it
   (anchors, marks, the range view services).
 
-Exit status: 0 nothing to do, 1 the add-on needs work, 2 error (or --merge
-refused because the 2.0 build replaces the release).
+Exit status: 0 nothing to do, 1 the add-on needs work, 2 error.
 """
 import argparse
 import io
@@ -58,7 +55,6 @@ LW_URL = "https://github.com/cyberbobjr/LiveWire"
 LW_MOD = "Contents/mods/batman_LiveWire"
 REL_MOD = ROOT / "batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling"
 DEV_MOD = ROOT / "batman_LiveWireCoupling_dev/Contents/mods/batman_LiveWireCoupling_dev"
-V2_MOD = ROOT / "batman_LiveWireCoupling_v2/Contents/mods/batman_LiveWireCoupling_v2"
 COUPLING = "shared/LiveWire/LW_Coupling.lua"          # Live Wire's coupling extension point
 REGISTER = "shared/LiveWireCoupling/LWC_Register.lua"  # the 2.0 add-on's registration
 COUPLING_VERSION = 1                                    # the version add-on 2.0 is written for
@@ -179,7 +175,6 @@ def missing_refs(ours, lw_files, replaced):
 
 def run_tests(addon, lw_lua):
     py = str(PYTHON) if PYTHON.exists() else sys.executable
-    # run_tests.py picks the tests for the add-on's version (tests/ or tests/v2/).
     r = subprocess.run([py, str(ROOT / "tests/run_tests.py"), str(addon), "--livewire", str(lw_lua)],
                        capture_output=True, text=True)
     lines = [l for l in (r.stdout + r.stderr).splitlines() if not l.startswith("syntax ok")]
@@ -283,7 +278,6 @@ def main():
 
     # The coupling extension point (add-on 2.0).
     api = coupling_version(new_lw.get(COUPLING)) if COUPLING in new_lw else None
-    switch_to_v2 = False
     print("\nCoupling extension point (LiveWire.Coupling):")
     if REGISTER in ours:
         if COUPLING not in new_lw:
@@ -299,12 +293,10 @@ def main():
         if not check_api(new_lw, new):
             needs_work = True
     elif COUPLING in new_lw:
-        switch_to_v2 = bool(replaced)
         print(f"  ! Live Wire {new} has it (version {api}). This add-on still replaces {len(replaced)} Live Wire"
               " file(s), which would overwrite Live Wire's new code.")
-        print(f"    Release add-on 2.0 instead: {V2_MOD.relative_to(ROOT)} (see batman_LiveWireCoupling_v2/RELEASE.md).")
         if api != COUPLING_VERSION:
-            print(f"  ! version {api}, the 2.0 build is written for {COUPLING_VERSION}: check LWC_Register.lua")
+            print(f"  ! version {api}, the add-on is written for {COUPLING_VERSION}: check LWC_Register.lua")
         check_api(new_lw, new)
         needs_work = True
     else:
@@ -361,16 +353,6 @@ def main():
         print("  PASS" if ok else "  FAIL: the add-on breaks with this Live Wire")
         needs_work = needs_work or not ok
 
-    if switch_to_v2 and V2_MOD.is_dir() and not args.no_tests:
-        print(f"\nOffline tests: the 2.0 build ({V2_MOD.name}) with Live Wire {new}:")
-        with tempfile.TemporaryDirectory() as td:
-            v2ok = run_tests(addon_lua(V2_MOD), extract(new, td))
-        print("  PASS: ready to test in game and release" if v2ok else "  FAIL: the 2.0 build needs work first")
-
-    if args.merge and switch_to_v2:
-        die(f"Live Wire {new} has the coupling extension point: not merging into the dev copy; "
-            f"release the 2.0 build ({V2_MOD.name}) instead, needs a session")
-
     if args.merge:
         dev_lua = addon_lua(DEV_MOD)
         dev = addon_tree(dev_lua)
@@ -404,10 +386,6 @@ def main():
         print("\nLeft to do by hand: the add-on's own changes to the merged files still make sense,"
               f" dev mod.info (modversion, description), dev README, a zip in dist/.")
 
-    if switch_to_v2:
-        print(f"\nResult: Live Wire {new} has the coupling extension point: release add-on 2.0"
-              f" ({V2_MOD.name}) in place of this one.")
-        return 1
     print("\nResult: " + ("the add-on needs an update for Live Wire " + new if needs_work
                           else f"Live Wire {new} changes nothing the add-on depends on."))
     if needs_work and not args.merge and not args.addon:
