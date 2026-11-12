@@ -87,6 +87,7 @@ function player:getZ() return self.z end
 function player:getVehicle() return nil end
 function player:getInventory() return { getCountTypeRecurse = function() return 0 end } end
 function getPlayer() return player end
+function getTimestampMs() return 0 end  -- LiveWire 2.0.0's range view times its "inverter gone" check
 function getSpecificPlayer() return player end
 function isoToScreenX(i, x, y, z) return x - y end
 function isoToScreenY(i, x, y, z) return x + y - z * 3 end
