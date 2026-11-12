@@ -1,29 +1,46 @@
--- Offline test of the dev build's right-click menu: "Show all powered areas" and
--- the coupling range in the menu, with stubs for the game's globals. Run by run_tests.py with Lua 5.1 (the game's Kahlua is 5.1).
--- Globals set by the runner: MOD_LUA (path to the dev mod's media/lua folder).
+-- Offline test of the 2.0 build's right-click menu: "Show all powered areas" and
+-- the coupling range in the menu. Runs Live Wire's own LW_ContextMenu.lua and its
+-- coupling extension point (LW_Extension.lua, LW_Coupling.lua) with the add-on
+-- registered, and stubs for the game's globals. Run by run_tests.py with Lua 5.1
+-- (the game's Kahlua is 5.1). Globals set by the runner: MOD_LUA (the add-on's
+-- media/lua folder), LIVEWIRE_LUA (Live Wire's media/lua folder, with LW_Coupling.lua).
 
 local fails, passes = 0, 0
 local function check(cond, msg)
     if cond then passes = passes + 1 else fails = fails + 1; print("FAIL: " .. msg) end
+end
+if not LIVEWIRE_LUA then
+    print("FAIL: zones_test.lua needs --livewire <Live Wire media/lua folder> (see the README)")
+    return 1
 end
 
 ---------------------------------------------------------------- game stubs
 function isServer() return false end
 local ticks, fillWorld = {}, nil
 Events = {
-    OnTick = { Add = function(f) ticks[#ticks + 1] = f end },
+    OnTick = {
+        Add = function(f) ticks[#ticks + 1] = f end,
+        Remove = function(f)
+            for i = #ticks, 1, -1 do if ticks[i] == f then table.remove(ticks, i) end end
+        end,
+    },
     OnFillWorldObjectContextMenu = { Add = function(f) fillWorld = f end },
     OnFillInventoryObjectContextMenu = { Add = function() end },
+    OnInitGlobalModData = { Add = function() end },
 }
 local loaded = {}
 function require(name)
     local files = {
-        ["LiveWireCoupling/LWC_ZonesView"] = "/client/LiveWireCoupling/LWC_ZonesView.lua",
-        ["LiveWireCoupling/LWC_CouplingRange"] = "/shared/LiveWireCoupling/LWC_CouplingRange.lua",
+        ["LiveWireCoupling/LWC_ZonesView"] = MOD_LUA .. "/client/LiveWireCoupling/LWC_ZonesView.lua",
+        ["LiveWireCoupling/LWC_CouplingRange"] = MOD_LUA .. "/shared/LiveWireCoupling/LWC_CouplingRange.lua",
+        ["LiveWire/LW_Extension"] = LIVEWIRE_LUA .. "/shared/LiveWire/LW_Extension.lua",
+        ["LiveWire/LW_Coupling"] = LIVEWIRE_LUA .. "/shared/LiveWire/LW_Coupling.lua",
+        ["LiveWire/LW_API"] = LIVEWIRE_LUA .. "/shared/LiveWire/LW_API.lua",
+        ["LiveWire/LW_RangeView"] = LIVEWIRE_LUA .. "/client/LiveWire/LW_RangeView.lua",
     }
     if files[name] and not loaded[name] then
         loaded[name] = true
-        dofile(MOD_LUA .. files[name])
+        dofile(files[name])
     end
 end
 
@@ -70,6 +87,7 @@ function player:getZ() return self.z end
 function player:getVehicle() return nil end
 function player:getInventory() return { getCountTypeRecurse = function() return 0 end } end
 function getPlayer() return player end
+function getTimestampMs() return 0 end  -- LiveWire 2.0.0's range view times its "inverter gone" check
 function getSpecificPlayer() return player end
 function isoToScreenX(i, x, y, z) return x - y end
 function isoToScreenY(i, x, y, z) return x + y - z * 3 end
@@ -123,12 +141,8 @@ LiveWire.Config = {
     verticalRange = function() return 3 end,
     get = function(k) return ({ LinkRange = 30, LinkVerticalRange = 3, WirePerTiles = 4 })[k] end,
 }
--- Same public fields as LW_RangeView.lua.
-local RV = { COLOR = { r = 0.25, g = 0.9, b = 1.0, a = 0.9 } }
-LiveWire.RangeView = RV
-function RV.isShown(id) return RV.inverterId ~= nil and RV.inverterId == id end
-function RV.hide() RV.inverterId, RV.center, RV.opts = nil, nil, nil end
-function RV.show(id, x, y, z, opts) RV.inverterId, RV.center, RV.opts = id, { x = x, y = y, z = z }, opts end
+local disc = true   -- false: a coverage provider replaces the disc (LiveWire Extended)
+LiveWire.Coverage = { hasDisc = function() return disc end, extraPositions = function() return {} end }
 LiveWire.PumpView = { hide = function() end, isShown = function() return false end }
 LiveWire.Marks = { get = function(o) return o and o.mark end }
 LiveWire.Anchor = { table = function() return anchors end }
@@ -164,10 +178,11 @@ function LiveWire.Install.distance(x1, y1, z1, x2, y2, z2)
     return math.sqrt(dx * dx + dy * dy), math.abs(z1 - z2)
 end
 function LiveWire.Install.wiresFor(d) return math.max(1, math.ceil(d / 4)) end
--- Like Live Wire's: the distance check reads the cable range.
+-- Like Live Wire's: the distance check reads the coupling range (the cable range
+-- unless an add-on sets one).
 function LiveWire.Install.checkCouple(character, slave, master)
     local d = dist(slave:getSquare(), master:getSquare())
-    local range = LiveWire.Config.get("LinkRange")
+    local range = LiveWire.Coupling.range()
     if d > range then return false, "Tooltip_LW_TooFarForCable", tostring(math.ceil(d)), tostring(range) end
     return true, nil, math.max(1, math.ceil(d / 4))
 end
@@ -196,11 +211,31 @@ local function find(menu, name)
 end
 local function click(opt) opt.fn(opt.target, opt.args[1], opt.args[2], opt.args[3]) end
 
----------------------------------------------------------------- load the mod
-dofile(MOD_LUA .. "/client/LiveWire/LW_ContextMenu.lua")
+---------------------------------------------------------------- load, in the game's order
+-- Shared files (Live Wire's, then the add-on's), then client files (Live Wire's, then
+-- the add-on's).
+require("LiveWire/LW_Extension")
+require("LiveWire/LW_Coupling")
+require("LiveWire/LW_API")
+dofile(MOD_LUA .. "/shared/LiveWireCoupling/LWC_Register.lua")
+check(LiveWire.CouplingAddon.ok == true, "the add-on registered: " .. tostring(LiveWire.CouplingAddon.why))
+check(LiveWire.Coupling.slaveKeepsZone() == true, "coupled inverters keep their zone")
+require("LiveWire/LW_RangeView")
+local RV = LiveWire.RangeView
+dofile(LIVEWIRE_LUA .. "/client/LiveWire/LW_ContextMenu.lua")
+local baseShowRange = LiveWire.Menu.onShowRange
+require("LiveWireCoupling/LWC_ZonesView")
 local ZV = LiveWire.ZonesView
-check(ZV ~= nil, "LWC_ZonesView loaded through the menu's require")
+check(ZV ~= nil and ZV.addMenu ~= nil, "LWC_ZonesView loaded")
 check(fillWorld ~= nil, "menu registered its world context menu handler")
+check(LiveWire.Menu.onShowRange == baseShowRange, "Live Wire's Show range is not wrapped")
+check(#LiveWire.API.rangeViewListeners() == 1, "one range view listener registered")
+local ticksBefore = #ticks
+loaded["LiveWireCoupling/LWC_ZonesView"] = nil
+require("LiveWireCoupling/LWC_ZonesView")
+check(#LiveWire.API.rangeViewListeners() == 1, "reloading keeps one range view listener")
+ticks[#ticks] = nil   -- the reload added its OnTick handler again
+check(#ticks == ticksBefore, "tick handlers back to the first load's")
 
 ---------------------------------------------------------------- collect()
 local function ids(centers)
@@ -307,7 +342,7 @@ check(ZV.isShown("M") and RV.inverterId == nil, "Show all replaces the single ci
 -- Picked up between menu and click: no error, nothing shown.
 ZV.hide()
 local ghost = { getSquare = function() return nil end }
-local ok = pcall(LiveWire.Menu.onShowAllZones, player, ghost)
+local ok = pcall(ZV.toggle, player, ghost)
 check(ok and ZV.networkId == nil, "clicking for a removed inverter does nothing")
 check(uiCount <= 1, "overlays are not leaked (" .. uiCount .. " in UI)")
 
@@ -348,10 +383,23 @@ runTicks(ZV.CHECK_TICKS or 30)
 check(RV.inverterId == nil, "Show range hides after its inverter is picked up")
 putBack(X)
 -- A pump's circle (RangeView with options) is left to LW_PumpView.
-RV.show("P", 300, 300, 0, { radius = 10 })
+RV.show("P", 102, 102, 0, { radius = 10 })   -- near the player: Live Wire hides far views
 runTicks(ZV.CHECK_TICKS or 30)
 check(RV.inverterId == "P", "a pump's circle is not touched")
 RV.hide()
+
+---------------------------------------------------------------- LiveWire Extended: no radius
+-- Extended's coverage provider replaces the disc: no circles to show, so no option.
+ZV.hide()
+disc = false
+local xm = openMenu(M)
+check(xm ~= nil and find(xm, "Show all powered areas") == nil and find(xm, "Hide all powered areas") == nil,
+    "no radius (Extended): 'Show all powered areas' is not offered")
+check(find(openMenu(S1), "Show all powered areas") == nil, "no radius: not offered on a coupled inverter either")
+ZV.toggle(player, M)
+check(ZV.networkId == nil and ZV.element == nil, "no radius: toggling shows nothing")
+disc = true
+check(find(openMenu(M), "Show all powered areas") ~= nil, "with a radius again: offered")
 
 ---------------------------------------------------------------- coupling range
 local F = inverter("F", 145, 100, 0)          -- 36 tiles from X: past the cable range
@@ -377,15 +425,8 @@ check(got == "M F", "range 40: 36 tiles offered, got '" .. got .. "'")
 couplingRange = 10
 local sub
 got, sub = coupleTargets(X)
-check(got == "" and sub and find(sub, "No inverter within the coupling range (10 tiles)") ~= nil,
-    "range 10: 'No inverter within the coupling range (10 tiles)'")
--- With a translation, the add-on's key gets the range.
-local textOrNull = getTextOrNull
-getTextOrNull = function(k, ...) texts[k] = { ... }; return k end
-got, sub = coupleTargets(X)
-getTextOrNull = textOrNull
-check(sub and find(sub, "ContextMenu_LWC_NoInverterCoupling") ~= nil
-    and texts["ContextMenu_LWC_NoInverterCoupling"][1] == "10", "translated: the coupling range message gets 10")
+check(got == "" and sub and find(sub, "ContextMenu_LW_NoInverter") ~= nil
+    and texts["ContextMenu_LW_NoInverter"][1] == "10", "range 10: 'No inverter within 10 tiles'")
 couplingRange = 50
 unloaded[key(145, 100, 0)] = true
 got = coupleTargets(X)
@@ -405,6 +446,14 @@ check(net == "F" and ids(c) == "145,100,0 185,100,0", "far slave collects its ma
 net, c = ZV.collect(F)
 check(net == "F" and ids(c) == "145,100,0 185,100,0", "master collects its far slave, got " .. ids(c))
 check(LiveWire.Config.get("LinkRange") == 30, "the cable range is unchanged after the menus")
+-- Lowered after coupling: G is 40 tiles from F, past a 30-tile range. Live Wire finds
+-- the master through its anchor at any distance (API revision 3).
+couplingRange = 30
+gm = openMenu(G)
+check(find(gm, "ContextMenu_LW_CoupledTo") ~= nil and texts["ContextMenu_LW_CoupledTo"][1] == "40",
+    "range lowered to 30: the slave's menu still shows its master 40 tiles away")
+check(find(gm, "ContextMenu_LW_ShowRange") ~= nil and find(gm, "Show all powered areas") ~= nil,
+    "the far slave still has Show range and Show all powered areas")
 couplingRange = 0
 
 print(string.format("%d passed, %d failed", passes, fails))

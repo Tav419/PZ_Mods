@@ -1,5 +1,6 @@
--- Offline test of the dev build's coupling range (LWC_CouplingRange.lua), with stubs
--- for the game's globals. Run by run_tests.py with Lua 5.1 (the game's Kahlua is 5.1).
+-- Offline test of the 2.0 build's coupling range (LWC_CouplingRange.lua), with stubs
+-- for the game's globals. Since 2.0 Live Wire reads the range through its coupling
+-- extension point (register_test.lua), so nothing is wrapped here. Run by run_tests.py with Lua 5.1 (the game's Kahlua is 5.1).
 -- Globals set by the runner: MOD_LUA (path to the dev mod's media/lua folder).
 
 local fails, passes = 0, 0
@@ -84,33 +85,17 @@ function Install.inverterById(sq, id)
         if e.obj.mark.id == id then return e.obj end
     end
 end
--- Same shape as Live Wire's: the distance check reads LinkRange; an object with
--- `boom` raises an error.
-local seenRange
-function Install.checkCouple(character, slaveObj, masterObj)
-    if masterObj.boom then error("boom") end
-    local a, b = slaveObj:getSquare(), masterObj:getSquare()
-    local dist = Install.distance(a.x, a.y, a.z, b.x, b.y, b.z)
-    local range = LiveWire.Config.get("LinkRange")
-    seenRange = range
-    if dist > range then
-        return false, "Tooltip_LW_TooFarForCable", tostring(math.ceil(dist - 1e-9)), tostring(range)
-    end
-    return true, nil, math.max(1, math.ceil(dist / 4))
-end
-local baseCheck = Install.checkCouple
-
 ---------------------------------------------------------------- load
+local installBefore = {}
+for k, v in pairs(Install) do installBefore[k] = v end
+dofile(LIVEWIRE_LUA .. "/shared/LiveWire/LW_API.lua")
 dofile(MOD_LUA .. "/shared/LiveWireCoupling/LWC_CouplingRange.lua")
 local CR = LiveWire.CouplingRange
 check(CR ~= nil, "LiveWire.CouplingRange defined")
-check(Install.checkCouple ~= baseCheck and CR.baseCheckCouple == baseCheck, "checkCouple wrapped, original kept")
+local same = true
+for k, v in pairs(Install) do if installBefore[k] ~= v then same = false end end
+check(same and Install.checkCouple == nil, "Live Wire's Install is not wrapped or changed")
 check(LiveWire.Config.get == baseGet, "Config.get untouched at load")
--- Loading the file again must not wrap the wrapper.
-local wrapped = Install.checkCouple
-dofile(MOD_LUA .. "/shared/LiveWireCoupling/LWC_CouplingRange.lua")
-check(CR.baseCheckCouple == baseCheck, "reloading keeps Live Wire's original as the base")
-Install.checkCouple = wrapped
 
 ---------------------------------------------------------------- CR.get
 optionValue = nil
@@ -125,28 +110,9 @@ check(CR.get() == 45, "falls back to SandboxVars, got " .. tostring(CR.get()))
 useSandboxVars = false
 SandboxVars = nil
 
----------------------------------------------------------------- checkCouple
 local A = inverter("A", 0, 0, 0)       -- the slave being coupled
 local B = inverter("B", 45, 0, 0)      -- master 45 tiles away
-optionValue = 0
-local ok, why, a1, a2 = Install.checkCouple(nil, A, B)
-check(ok == false and why == "Tooltip_LW_TooFarForCable" and a1 == "45" and a2 == "30",
-    "range 0: refused past the cable range (" .. tostring(why) .. " " .. tostring(a1) .. " " .. tostring(a2) .. ")")
-optionValue = 50
-ok, why, a1 = Install.checkCouple(nil, A, B)
-check(ok == true and why == nil and a1 == 12, "range 50: allowed, 12 wires, got " .. tostring(ok) .. " " .. tostring(a1))
-check(seenRange == 50, "Live Wire's check saw the coupling range")
-check(LiveWire.Config.get == baseGet and LiveWire.Config.get("LinkRange") == 30,
-    "cable range restored after the check")
-optionValue = 40
-ok = Install.checkCouple(nil, A, B)
-check(ok == false, "range 40: 45 tiles refused")
--- An error inside Live Wire's check still restores the cable range.
-local boom = inverter("BOOM", 5, 0, 0)
-boom.boom = true
-local okCall, err = pcall(Install.checkCouple, nil, A, boom)
-check(not okCall and tostring(err):find("boom", 1, true) ~= nil, "errors are passed on")
-check(LiveWire.Config.get == baseGet, "cable range restored after an error")
+local BOOM = inverter("BOOM", 5, 0, 0)
 
 ---------------------------------------------------------------- CR.inverters
 local C = inverter("C", 20, 0, 0)                  -- within the cable range
@@ -173,6 +139,13 @@ for i, w in ipairs(world) do if w == C then table.remove(world, i) break end end
 list = CR.inverters(A:getSquare(), 50)
 check(names(list) == "A BOOM G B", "a picked-up inverter is not listed, got " .. names(list))
 check(#CR.inverters(nil, 50) == 0, "no square: empty list")
+
+---------------------------------------------------------------- CR.reachable (Live Wire's `inverters`)
+optionValue = 50
+check(names(CR.reachable(A:getSquare())) == "A BOOM G B", "reachable: within the coupling range (50)")
+optionValue = 0
+check(names(CR.reachable(A:getSquare())) == "A BOOM G", "reachable, option 0: within the cable range (30)")
+optionValue = nil
 
 ---------------------------------------------------------------- CR.inverterById
 check(CR.inverterById(A:getSquare(), "D") == D, "finds an inverter past the cable range through its anchor")

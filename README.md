@@ -8,7 +8,7 @@ Project Zomboid mods, targeting **Build 42** (the server runs 42.21.0).
 |---|---|
 | [`batman_LiveWireCoupling/`](batman_LiveWireCoupling) | **Live Wire: Coupled Inverter Zones**, the released add-on for [Live Wire](https://github.com/cyberbobjr/LiveWire). Same files as the [Steam Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3830945476); [its README](batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/README.md) lists every change. |
 | [`batman_LiveWireCoupling_dev/`](batman_LiveWireCoupling_dev) | Work in progress for the next version. Not for use. |
-| [`batman_LiveWireCoupling_v2/`](batman_LiveWireCoupling_v2) | Version 2.0, waiting for the next Live Wire release: it plugs into Live Wire's new coupling extension point instead of replacing Live Wire files. Not for use yet; [its release checklist](batman_LiveWireCoupling_v2/RELEASE.md). |
+| [`batman_LiveWireCoupling_v2/`](batman_LiveWireCoupling_v2) | The 2.0 test build, folded into the release on 2026-11-12 (LiveWire 2.0.0); kept for [its release checklist](batman_LiveWireCoupling_v2/RELEASE.md) until 2.0 is live. Not for use. |
 | [`tests/`](tests), [`tools/`](tools) | Offline tests and the Live Wire update checker (see below). |
 
 To play, subscribe on the Workshop rather than downloading from here.
@@ -76,18 +76,17 @@ git clone https://github.com/cyberbobjr/LiveWire .livewire && git -C .livewire c
 source with every release tag, checked out at the version being tested (the one
 in the add-on's mod.info, "Made for Live Wire X.Y.Z").
 
-For the 2.0 build, also clone Live Wire's beta branch, which has the coupling
-extension point (until it is in a Live Wire release):
+To check the add-on against LiveWire's beta branch (the daily beta watch does
+this), also clone it:
 
 ```bash
 git clone --branch beta https://github.com/cyberbobjr/LiveWire .livewire-beta
 ```
 
-`tests/v2/` holds the 2.0 build's tests. The runner picks them, and
-`.livewire-beta`, by itself for a 2.0 build (a mod with `LWC_Register.lua`):
+and point the runner at it:
 
 ```bash
-git -C .livewire-beta pull && .venv/bin/python tests/run_tests.py batman_LiveWireCoupling_v2/Contents/mods/batman_LiveWireCoupling_v2/42.21/media/lua
+git -C .livewire-beta pull && .venv/bin/python tests/run_tests.py batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/42.21/media/lua --livewire .livewire-beta/Contents/mods/batman_LiveWire/42.21/media/lua
 ```
 
 Then run every test against the release, or the dev copy's `media/lua` folder:

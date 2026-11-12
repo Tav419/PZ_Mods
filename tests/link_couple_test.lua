@@ -1,10 +1,9 @@
--- Offline test of linking and coupling with the add-on loaded (dev build 1.4.0).
--- Live Wire's own files (LIVEWIRE_LUA: LW_Core, LW_Config, LW_Defs, LW_Marks,
--- LW_Install, LW_Backup, TimedActions/LW_TimedActions) run with the add-on's
--- replacements (MOD_LUA: LW_Registry, LW_Devices, LW_Computer) and its coupling
--- range wrapper, as on the server. Since Live Wire 1.7.2 the link and couple actions
--- call Devices.wired once the link is made, and Install.checkLink reads the
--- inverter mark's `svc` (in service) field; both come from LW_Devices.lua.
+-- Offline test of linking and coupling with the 2.0 add-on registered. Live Wire's
+-- own files (LIVEWIRE_LUA: LW_Core, LW_Config, LW_Defs, LW_Marks, LW_Install, the
+-- coupling extension point, LW_Backup, TimedActions, LW_Registry, LW_Devices,
+-- LW_Computer) run with the add-on's registration (MOD_LUA: LWC_CouplingRange,
+-- LWC_Register), as on the server. Since 2.0 the add-on replaces none of them:
+-- this checks that Live Wire's own code keeps a coupled inverter's zone.
 -- Run by run_tests.py with --livewire. Globals set by the runner: MOD_LUA, LIVEWIRE_LUA.
 
 local fails, passes = 0, 0
@@ -31,7 +30,8 @@ function sendRemoveItemFromContainer() end
 function sendAddItemToContainer() end
 function getGameTime() return { getWorldAgeHours = function() return 100 end } end
 local globalData = {}
-ModData = { getOrCreate = function(k) globalData[k] = globalData[k] or {}; return globalData[k] end }
+ModData = { getOrCreate = function(k) globalData[k] = globalData[k] or {}; return globalData[k] end,
+            transmit = function() end }
 
 -- The server's sandbox: cable range 30, coupling range 70, level requirements on.
 local sandbox = {
@@ -122,12 +122,20 @@ local function newChar(name, level)
         end
         return { size = function() return #list end, get = function(_, i) return list[i + 1] end }
     end
+    -- Live Wire needs a screwdriver to link and couple (beta d8bb5d2): carry one.
+    local screwdriver = { isBroken = function() return false end,
+                          hasTag = function() return true end }
+    function inv:getFirstTagEvalRecurse() return screwdriver end
+    function c:getPrimaryHandItem() return nil end
+    function c:getSecondaryHandItem() return nil end
     function c:getInventory() return inv end
     return c
 end
 
 ---------------------------------------------------------------- load Live Wire + the add-on
 local LW = LIVEWIRE_LUA
+ItemTag = ItemTag or { SCREWDRIVER = "Screwdriver" }
+BodyPartType = BodyPartType or { Hand_R = "Hand_R", Hand_L = "Hand_L" }
 dofile(LW .. "/shared/LiveWire/LW_Core.lua")
 local warnings = {}
 function LiveWire.log() end
@@ -139,23 +147,28 @@ LiveWire.Xp = { award = function(ch, n) ch.xp = ch.xp + (n or 0) end }
 LiveWire.Maintenance = { liveWork = function() return false end }
 LiveWire.Migration = { run = function() return true end }
 LiveWire.PowerHistory = { init = function() end, record = function() end }
-LiveWire.Sim = { updateAnchor = function() end, refresh = function() end, subscribers = {} }
+-- Like Live Wire's Sim.updateAnchor: the registry's anchor of an inverter (its zone).
+LiveWire.Sim = { updateAnchor = function(inv, on) LiveWire.Registry.setAnchor(inv, on) end,
+                 refresh = function() end, subscribers = {} }
 LiveWire.Demand = { invalidate = function() end, reset = function() end, forget = function() end }
 local anchorOff = {}
 LiveWire.Anchor = {
     set = function(id, a, on) if on == false then anchorOff[id] = true end end,
     table = function() return LiveWire.Registry.anchors end,
 }
-dofile(LW .. "/shared/LiveWire/LW_Config.lua")
-dofile(LW .. "/shared/LiveWire/LW_Defs.lua")
-dofile(LW .. "/shared/LiveWire/LW_Marks.lua")
-dofile(LW .. "/shared/LiveWire/LW_Install.lua")
-dofile(LW .. "/shared/LiveWire/TimedActions/LW_TimedActions.lua")
-dofile(LW .. "/server/LiveWire/LW_Backup.lua")
-dofile(MOD_LUA .. "/server/LiveWire/LW_Registry.lua")
-dofile(MOD_LUA .. "/server/LiveWire/LW_Devices.lua")
-dofile(MOD_LUA .. "/server/LiveWire/LW_Computer.lua")
+-- Shared files (Live Wire's, then the add-on's), then server files, as the game loads them.
+for _, f in ipairs({ "LW_Config", "LW_Defs", "LW_Marks", "LW_Inventory", "LW_Barrels", "LW_Install",
+        "LW_Extension", "LW_Coupling", "LW_API", "LW_EventBus", "LW_CircuitProvider",
+        "TimedActions/LW_BaseAction", "TimedActions/LW_TimedActions" }) do
+    dofile(LW .. "/shared/LiveWire/" .. f .. ".lua")
+end
 dofile(MOD_LUA .. "/shared/LiveWireCoupling/LWC_CouplingRange.lua")
+dofile(MOD_LUA .. "/shared/LiveWireCoupling/LWC_Register.lua")
+LiveWire.Circuits = { addChunkVisitor = function() end, topologyChanged = function() end }
+for _, f in ipairs({ "LW_Backup", "LW_Inverters", "LW_Registry", "LW_Devices", "LW_Computer" }) do
+    dofile(LW .. "/server/LiveWire/" .. f .. ".lua")
+end
+check(LiveWire.CouplingAddon.ok == true, "the add-on registered: " .. tostring(LiveWire.CouplingAddon.why))
 
 local R, Devices, Install, Defs = LiveWire.Registry, LiveWire.Devices, LiveWire.Install, LiveWire.Defs
 -- Experience a device gives at its first link (Live Wire's LW_Defs.lua).
@@ -281,6 +294,11 @@ check(res == true, "level 3 couples a slave 60 tiles from its master, got " .. t
 check(s.coupled == m.id and s.grid == m.grid and R.grid(m.grid).slaves[s.id],
     "the slave is on the master's network")
 check(R.grid(m.grid).inverter == m.id and #R.slaves(R.grid(m.grid)) == 1, "the master keeps its grid")
+-- The add-on's point: Live Wire keeps the coupled inverter's anchor (its own zone).
+check(R.anchors[s.id] ~= nil and R.anchors[m.id] ~= nil, "the slave keeps its anchor (its own zone)")
+local near = {}
+for _, d in ipairs(R.invertersNear(260, 100, 5)) do near[d.id] = true end
+check(near[s.id], "invertersNear lists the coupled inverter (its zone shares appliances)")
 check(mark(S).cpl == m.id and mark(S).svc == true and m.svc == true and mark(M).svc == true,
     "both inverters in service, marks updated")
 check(s.level == 3 and mid.xp - xp0 == 5 + 2 * xpOf("Inverter"),
@@ -319,6 +337,7 @@ check(link(mid, P2, M) == true and mid.xp == xp0, "re-linking a moved panel give
 ---------------------------------------------------------------- removing inverters
 LiveWire.Devices.remove(s.id)
 check(anchorOff[s.id] == true, "a picked-up slave's own zone is switched off")
+check(R.anchors[s.id] == nil, "and its anchor is dropped")
 check(R.device(s.id) == nil and not R.grid(m.grid).slaves[s.id], "the slave leaves the master's network")
 local S2, s2 = place(pro, "Inverter", 230, 100, 0)
 check(couple(mid, S2, M) == true, "a second slave couples")

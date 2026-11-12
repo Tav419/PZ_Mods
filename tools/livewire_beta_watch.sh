@@ -1,12 +1,12 @@
 #!/bin/bash
-# Daily watch of Live Wire's beta branch for add-on 2.0 (batman_LiveWireCoupling_v2),
+# Daily watch of LiveWire's beta branch for the add-on (2.0 and later, batman_LiveWireCoupling),
 # which plugs into the beta's coupling extension point (LiveWire.Coupling). Run by
 # josh's crontab once a day; read-only for the add-on (it never edits or commits).
 #
 # It updates the beta clone (~/PZ_Mods/.livewire-beta) to GitHub's beta branch and,
 # when the beta moved, lists the changed files the 2.0 build depends on and runs the
 # 2.0 build's offline tests. It also notes any new Live Wire release tag, and whether
-# it has the coupling extension point (then: release 2.0, see the v2 RELEASE.md).
+# it has the coupling extension point (then: run tools/livewire_update.py).
 # One line per run goes to ~/livewire-beta-watch.log, starting "LIVE WIRE BETA":
 #   UNCHANGED          nothing new on the beta
 #   CHANGED ... PASS   the beta moved, nothing the 2.0 build uses changed, tests pass
@@ -23,7 +23,7 @@ CLONE=$REPO/.livewire-beta
 LOG=${LWB_LOG:-/home/josh/livewire-beta-watch.log}
 REPORT=${LWB_REPORT:-/home/josh/livewire-beta-watch-report.log}
 TAGS=${LWB_TAGS:-/home/josh/.livewire-beta-watch-tags}   # release tags already seen
-V2=$REPO/batman_LiveWireCoupling_v2/Contents/mods/batman_LiveWireCoupling_v2/42.21/media/lua
+V2=$REPO/batman_LiveWireCoupling/Contents/mods/batman_LiveWireCoupling/42.21/media/lua
 LUA=Contents/mods/batman_LiveWire/42.21/media/lua
 # Live Wire files the 2.0 build registers with, wraps or reads (beyond the files that
 # call LiveWire.Coupling, found below).
@@ -56,7 +56,7 @@ for t in $(g tag --list 'v*' | sort -V); do
     echo "$t" >>"$TAGS"
     [ "$seed" = 1 ] && continue
     if g cat-file -e "$t:$LUA/shared/LiveWire/LW_Coupling.lua" 2>/dev/null; then
-        log "NEW RELEASE TAG $t, WITH the coupling extension point: release add-on 2.0 (batman_LiveWireCoupling_v2/RELEASE.md)"
+        log "NEW RELEASE TAG $t, WITH the coupling extension point: run tools/livewire_update.py"
     else
         log "NEW RELEASE TAG $t, without the coupling extension point"
     fi
@@ -79,7 +79,7 @@ callers=$( { g grep -l 'LiveWire\.Coupling\.' "$old" -- "$LUA"; g grep -l 'LiveW
 changed=$(g diff --name-only "$old" origin/beta -- "$LUA" | sed "s|^$LUA/||")
 hit=$(for f in $WATCH $callers; do grep -qx "$f" <<<"$changed" && echo "$f"; done | sort -u)
 g reset --quiet --hard origin/beta
-out=$(timeout 600 "$REPO/.venv/bin/python" "$REPO/tests/run_tests.py" "$V2" 2>&1)
+out=$(timeout 600 "$REPO/.venv/bin/python" "$REPO/tests/run_tests.py" "$V2" --livewire "$CLONE/$LUA" 2>&1)
 rc=$?
 printf -- '--- changed files the 2.0 build depends on:\n%s\n--- 2.0 tests\n%s\nexit %s\n' \
     "${hit:-(none)}" "$(grep -v '^syntax ok\|^\[LiveWireCoupling\]' <<<"$out")" "$rc" >>"$REPORT"
