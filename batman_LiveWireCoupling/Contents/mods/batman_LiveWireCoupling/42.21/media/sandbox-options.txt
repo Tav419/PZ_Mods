@@ -5,3 +5,9 @@ option LiveWireCoupling.CouplingRange
     type = integer, min = 0, max = 70, default = 0,
     page = LiveWireCoupling, translation = LiveWireCoupling_CouplingRange,
 }
+
+option LiveWireCoupling.PowerStreetlights
+{
+    type = boolean, default = true,
+    page = LiveWireCoupling, translation = LiveWireCoupling_PowerStreetlights,
+}

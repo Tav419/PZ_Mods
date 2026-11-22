@@ -37,7 +37,10 @@ The add-on's files, under `42.21/media/`:
   (below) and the search for inverters past the cable range, through LiveWire's
   anchor table.
 - `lua/client/LiveWireCoupling/LWC_ZonesView.lua`: "Show all powered areas".
-- `sandbox-options.txt`: the "Coupling range" option.
+- `lua/client/LiveWireCoupling/LWC_Streetlights.lua`: street lamps in powered
+  areas (below).
+- `sandbox-options.txt`: the "Coupling range" and "Light street lamps inside
+  powered areas" options.
 - `lua/shared/Translate/EN/Sandbox.json`: the option's page title, name and
   tooltip (other languages show the English text). It adds to LiveWire's
   sandbox texts; it does not replace them.
@@ -102,6 +105,18 @@ works alongside it:
 - "Show all powered areas" is not offered, since there are no circles to show
   (LiveWire's own "Show range" draws none either).
 
+## Street lamps in powered areas
+
+At night, street lamps inside the powered zone of an inverter (coupled inverters
+included, each with its own zone) light up while the zone has power. Vanilla
+only lets the power grid light them, so once the grid is off they stay dark.
+Signs, billboards, traffic lights, lamps indoors, lamps switched off or without
+a bulb and lamps the grid already lights are left alone. A zone that is off or
+removed lights nothing. Each player's game draws the lights itself (client
+only); nothing is saved, so removing the add-on needs no cleanup. Turn it off
+with the sandbox option **Light street lamps inside powered areas** (on by
+default).
+
 ## Disabling or removing this add-on
 
 Nothing to do first. When a save loads without the add-on, LiveWire switches
@@ -111,6 +126,8 @@ the zones come back.
 
 ## Version history
 
+- 2.1.0: street lamps inside powered areas light up at night (sandbox option,
+  on by default). Nothing else changes.
 - 2.0.0 (for LiveWire 2.0.0): uses LiveWire's new coupling extension point instead of replacing 8
   LiveWire files, so LiveWire updates no longer break the add-on or undo
   batman-fr's fixes. Same features. Needs a LiveWire with the extension point.

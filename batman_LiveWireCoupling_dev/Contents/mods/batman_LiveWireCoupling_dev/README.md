@@ -136,12 +136,15 @@ page, not to batman-fr. LiveWire by batman-fr (cyberbobjr on GitHub), original r
 https://github.com/cyberbobjr/LiveWire, Workshop ID 3821807453, MIT license.
 The full license text is in the `LICENSE` file.
 
-## Street lamps in powered areas (dev build only)
+## Street lamps in powered areas
 
 At night, street lamps inside the powered zone of an inverter (coupled inverters
-included, each with its own zone) are lit while the zone has power. Signs,
-billboards, traffic lights, lamps indoors, lamps switched off or without a bulb and
-lamps the grid already lights are left alone. Client only
-(`lua/client/LiveWireCoupling/LWC_Streetlights.lua`); sandbox option
-"Light street lamps inside powered areas" (on by default). Lamp colour and reach are
-constants at the top of that file, to tune after the first solo test.
+included, each with its own zone) light up while the zone has power. Vanilla
+only lets the power grid light them, so once the grid is off they stay dark.
+Signs, billboards, traffic lights, lamps indoors, lamps switched off or without
+a bulb and lamps the grid already lights are left alone. A zone that is off or
+removed lights nothing. Each player's game draws the lights itself (client
+only); nothing is saved, so removing the add-on needs no cleanup. Turn it off
+with the sandbox option **Light street lamps inside powered areas** (on by
+default).
+
